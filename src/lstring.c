@@ -35,6 +35,9 @@
 /*
 ** equality for long strings
 */
+/**
+ * 比较字符串是否相等
+ */
 int luaS_eqlngstr (TString *a, TString *b) {
   size_t len = a->len;
   lua_assert(a->tt == LUA_TLNGSTR && b->tt == LUA_TLNGSTR);
@@ -44,6 +47,9 @@ int luaS_eqlngstr (TString *a, TString *b) {
 }
 
 
+/**
+ * 字符串 hash 值
+ */
 unsigned int luaS_hash (const char *str, size_t l, unsigned int seed) {
   unsigned int h = seed ^ cast(unsigned int, l);
   size_t l1;
@@ -57,6 +63,9 @@ unsigned int luaS_hash (const char *str, size_t l, unsigned int seed) {
 /*
 ** resizes the string table
 */
+/**
+ * 还需要重新 hash 表中的字符串
+ */
 void luaS_resize (lua_State *L, int newsize) {
   int i;
   stringtable *tb = &G(L)->strt;
@@ -89,6 +98,13 @@ void luaS_resize (lua_State *L, int newsize) {
 /*
 ** creates a new string object
 */
+/**
+ * str: c字符串位置
+ * l: 字符串长度
+ * tag: 对象类型, 低三位是non-variant标志，标识Lua基本类型, 其余位区分如
+ * 长短字符串类型，整数、浮点数。
+ * h: hash值
+ */
 static TString *createstrobj (lua_State *L, const char *str, size_t l,
                               int tag, unsigned int h) {
   TString *ts;
@@ -106,6 +122,9 @@ static TString *createstrobj (lua_State *L, const char *str, size_t l,
 }
 
 
+/**
+ * 从 string table 中删除一个string
+ */
 void luaS_remove (lua_State *L, TString *ts) {
   stringtable *tb = &G(L)->strt;
   TString **p = &tb->hash[lmod(ts->hash, tb->size)];
@@ -119,6 +138,10 @@ void luaS_remove (lua_State *L, TString *ts) {
 /*
 ** checks whether short string exists and reuses it or creates a new one
 */
+/**
+ * l的长度小于 LUAI_MAXSHORTLEN 就是 short string;
+ * luaS_newlstr 函数会调用此函数
+ */
 static TString *internshrstr (lua_State *L, const char *str, size_t l) {
   TString *ts;
   global_State *g = G(L);
@@ -133,10 +156,13 @@ static TString *internshrstr (lua_State *L, const char *str, size_t l) {
       return ts;
     }
   }
+  /* not found */
   if (g->strt.nuse >= g->strt.size && g->strt.size <= MAX_INT/2) {
+	  /* string table扩容 */
     luaS_resize(L, g->strt.size * 2);
     list = &g->strt.hash[lmod(h, g->strt.size)];  /* recompute with new size */
   }
+  /* 插入到链表头部 */
   ts = createstrobj(L, str, l, LUA_TSHRSTR, h);
   ts->hnext = *list;
   *list = ts;
@@ -148,6 +174,9 @@ static TString *internshrstr (lua_State *L, const char *str, size_t l) {
 /*
 ** new string (with explicit length)
 */
+/**
+ * 如果有未回收的 hort string，则会直接回收利用
+ */
 TString *luaS_newlstr (lua_State *L, const char *str, size_t l) {
   if (l <= LUAI_MAXSHORTLEN)  /* short string? */
     return internshrstr(L, str, l);
@@ -167,6 +196,9 @@ TString *luaS_new (lua_State *L, const char *str) {
 }
 
 
+/**
+ * 分配一个大小为 s 的 Udata 数据块
+ */
 Udata *luaS_newudata (lua_State *L, size_t s) {
   Udata *u;
   GCObject *o;
@@ -176,6 +208,7 @@ Udata *luaS_newudata (lua_State *L, size_t s) {
   u = gco2u(o);
   u->len = s;
   u->metatable = NULL;
+  /* 将该对象设为 nil  */
   setuservalue(L, u, luaO_nilobject);
   return u;
 }

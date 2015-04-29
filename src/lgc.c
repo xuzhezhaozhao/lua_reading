@@ -200,6 +200,7 @@ GCObject *luaC_newobj (lua_State *L, int tt, size_t sz) {
   GCObject *o = cast(GCObject *, luaM_newobject(L, novariant(tt), sz));
   o->marked = luaC_white(g);
   o->tt = tt;
+  /* 插入到可回收链表中 */
   o->next = g->allgc;
   g->allgc = o;
   return o;

@@ -27,6 +27,9 @@
 ** false due to limited range of data type"; the +1 tricks the compiler,
 ** avoiding this warning but also this optimization.)
 */
+/**
+ * TODO +1 为何可以消除编译器警告?
+ */
 #define luaM_reallocv(L,b,on,n,e) \
   (((sizeof(n) >= sizeof(size_t) && cast(size_t, (n)) + 1 > MAX_SIZET/(e)) \
       ? luaM_toobig(L) : cast_void(0)) , \
@@ -47,15 +50,21 @@
 #define luaM_newvector(L,n,t) \
 		cast(t *, luaM_reallocv(L, NULL, 0, n, sizeof(t)))
 
+/* 新建一个大小为s的对象, 实质就是分配一块大小为s的内存 */
 #define luaM_newobject(L,tag,s)	luaM_realloc_(L, NULL, tag, (s))
 
 #define luaM_growvector(L,v,nelems,size,t,limit,e) \
           if ((nelems)+1 > (size)) \
             ((v)=cast(t *, luaM_growaux_(L,v,&(size),sizeof(t),limit,e)))
 
+/**
+ * 重新分配 vector 的大小, oldn 为原来的大小, n 为新的大小,
+ * v 是指向vector的指针, t 是vector保存的数据类型
+ */
 #define luaM_reallocvector(L, v,oldn,n,t) \
    ((v)=cast(t *, luaM_reallocv(L, v, oldn, n, sizeof(t))))
 
+/* 内存分配错误， 用户需要分配的block太大, 超出了Lua的限制 */
 LUAI_FUNC l_noret luaM_toobig (lua_State *L);
 
 /* not to be called directly */

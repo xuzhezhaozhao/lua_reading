@@ -107,6 +107,11 @@ static void seterrorobj (lua_State *L, int errcode, StkId oldtop) {
 }
 
 
+/**
+ * 在C语言中模仿exception机制, 可以参考这篇文章:
+ * http://www.di.unipi.it/~nids/docs/longjump_try_trow_catch.html
+ * 
+ */
 l_noret luaD_throw (lua_State *L, int errcode) {
   if (L->errorJmp) {  /* thread has an error handler? */
     L->errorJmp->status = errcode;  /* set status */

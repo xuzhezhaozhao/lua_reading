@@ -96,6 +96,9 @@ typedef LUAI_UACINT l_uacInt;
 #endif
 
 
+/**
+ * e 不为 true 就打印 msg 字符串并退出
+ */
 #define api_check(e,msg)	luai_apicheck((e) && msg)
 
 

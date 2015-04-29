@@ -346,7 +346,12 @@ LUALIB_API int luaL_checkoption (lua_State *L, int arg, const char *def,
                        lua_pushfstring(L, "invalid option '%s'", name));
 }
 
-
+/**
+ * 检测栈空间是否足够，不够话会自动增长，若需求太多的话可能报会stack overflow错
+ * 
+ * space: 用户需求的栈空间大小
+ * msg: 错误信息
+ */
 LUALIB_API void luaL_checkstack (lua_State *L, int space, const char *msg) {
   /* keep some extra space to run error routines, if needed */
   const int extra = LUA_MINSTACK;
@@ -358,7 +363,11 @@ LUALIB_API void luaL_checkstack (lua_State *L, int space, const char *msg) {
   }
 }
 
-
+/**
+ * 检查位置 arg 元素类型是否是 t 类型, 不是就报错
+ * arg : 栈位置
+ * t   : 类型
+ */
 LUALIB_API void luaL_checktype (lua_State *L, int arg, int t) {
   if (lua_type(L, arg) != t)
     tag_error(L, arg, t);
@@ -370,7 +379,11 @@ LUALIB_API void luaL_checkany (lua_State *L, int arg) {
     luaL_argerror(L, arg, "value expected");
 }
 
-
+/**
+ * arg: index
+ * 返回字符串长度，若参数不是字符串，而是Number，
+ * 则先转换再返回转换后字符串的长度, 其余类型报错.
+ */
 LUALIB_API const char *luaL_checklstring (lua_State *L, int arg, size_t *len) {
   const char *s = lua_tolstring(L, arg, len);
   if (!s) tag_error(L, arg, LUA_TSTRING);
@@ -378,6 +391,13 @@ LUALIB_API const char *luaL_checklstring (lua_State *L, int arg, size_t *len) {
 }
 
 
+/**
+ * 实现可选字符串参数;
+ * arg: index
+ * def: 默认值
+ * len: 返回字符串长度
+ * 返回值: 字符串首地址
+ */
 LUALIB_API const char *luaL_optlstring (lua_State *L, int arg,
                                         const char *def, size_t *len) {
   if (lua_isnoneornil(L, arg)) {
@@ -411,6 +431,10 @@ static void interror (lua_State *L, int arg) {
 }
 
 
+/**
+ * 检测栈arg位置的元素是否是integer类型, arg为参数的栈位置, 不是则报错中止
+ * 返回该元素.
+ */
 LUALIB_API lua_Integer luaL_checkinteger (lua_State *L, int arg) {
   int isnum;
   lua_Integer d = lua_tointegerx(L, arg, &isnum);
@@ -421,6 +445,10 @@ LUALIB_API lua_Integer luaL_checkinteger (lua_State *L, int arg) {
 }
 
 
+/**
+ * 可选参数.
+ * 若栈arg位置有元素，则返回该元素，否则返回默认值 def.
+ */
 LUALIB_API lua_Integer luaL_optinteger (lua_State *L, int arg,
                                                       lua_Integer def) {
   return luaL_opt(L, luaL_checkinteger, arg, def);
@@ -439,12 +467,17 @@ LUALIB_API lua_Integer luaL_optinteger (lua_State *L, int arg,
 ** check whether buffer is using a userdata on the stack as a temporary
 ** buffer
 */
+/* 是返回false，不是返回true */
 #define buffonstack(B)	((B)->b != (B)->initb)
 
 
 /*
 ** returns a pointer to a free area with at least 'sz' bytes
 */
+/*
+ * 原buffer空间不够的话会重新分配一片Udata的数据区域给buffer
+ * 返回的是buffer内的有效地址的首地址
+ */
 LUALIB_API char *luaL_prepbuffsize (luaL_Buffer *B, size_t sz) {
   lua_State *L = B->L;
   if (B->size - B->n < sz) {  /* not enough space? */
@@ -458,6 +491,7 @@ LUALIB_API char *luaL_prepbuffsize (luaL_Buffer *B, size_t sz) {
     newbuff = (char *)lua_newuserdata(L, newsize * sizeof(char));
     /* move content to new buffer */
     memcpy(newbuff, B->b, B->n * sizeof(char));
+	/* TODO lua_remove? */
     if (buffonstack(B))
       lua_remove(L, -2);  /* remove old buffer */
     B->b = newbuff;
@@ -467,6 +501,11 @@ LUALIB_API char *luaL_prepbuffsize (luaL_Buffer *B, size_t sz) {
 }
 
 
+/**
+ * 向buffer内写入字符串
+ * s: 字符串首地址
+ * l: 字符串长度
+ */
 LUALIB_API void luaL_addlstring (luaL_Buffer *B, const char *s, size_t l) {
   char *b = luaL_prepbuffsize(B, l);
   memcpy(b, s, l * sizeof(char));
@@ -479,6 +518,9 @@ LUALIB_API void luaL_addstring (luaL_Buffer *B, const char *s) {
 }
 
 
+/**
+ * 将buffer中的所有字符压入栈中
+ */
 LUALIB_API void luaL_pushresult (luaL_Buffer *B) {
   lua_State *L = B->L;
   lua_pushlstring(L, B->b, B->n);
@@ -486,13 +528,19 @@ LUALIB_API void luaL_pushresult (luaL_Buffer *B) {
     lua_remove(L, -2);  /* remove old buffer */
 }
 
-
+/**
+ * 同上，不过可用字符数量要先加 sz 
+ * sz: 新增的可用字符数量
+ */
 LUALIB_API void luaL_pushresultsize (luaL_Buffer *B, size_t sz) {
   luaL_addsize(B, sz);
   luaL_pushresult(B);
 }
 
 
+/**
+ * 将对象转为字符串放入buffer中, lua_State *从buffer中获得
+ */
 LUALIB_API void luaL_addvalue (luaL_Buffer *B) {
   lua_State *L = B->L;
   size_t l;
@@ -504,6 +552,9 @@ LUALIB_API void luaL_addvalue (luaL_Buffer *B) {
 }
 
 
+/**
+ * 初始化 buffer, 初始化buffer各个参数
+ */
 LUALIB_API void luaL_buffinit (lua_State *L, luaL_Buffer *B) {
   B->L = L;
   B->b = B->initb;
@@ -512,6 +563,9 @@ LUALIB_API void luaL_buffinit (lua_State *L, luaL_Buffer *B) {
 }
 
 
+/**
+ * sz: 实际需要的buffer内存空间大小
+ */
 LUALIB_API char *luaL_buffinitsize (lua_State *L, luaL_Buffer *B, size_t sz) {
   luaL_buffinit(L, B);
   return luaL_prepbuffsize(B, sz);

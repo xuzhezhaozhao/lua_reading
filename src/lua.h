@@ -100,6 +100,7 @@ typedef LUA_KCONTEXT lua_KContext;
 /*
 ** Type for C functions registered with Lua
 */
+/* 通过栈来传递参数 */
 typedef int (*lua_CFunction) (lua_State *L);
 
 /*
@@ -112,7 +113,9 @@ typedef int (*lua_KFunction) (lua_State *L, int status, lua_KContext ctx);
 ** Type for functions that read/write blocks when loading/dumping Lua chunks
 */
 typedef const char * (*lua_Reader) (lua_State *L, void *ud, size_t *sz);
-
+/*
+ * lstrlib.c 中有一个writer
+ */
 typedef int (*lua_Writer) (lua_State *L, const void *p, size_t sz, void *ud);
 
 
@@ -154,11 +157,27 @@ LUA_API const lua_Number *(lua_version) (lua_State *L);
 ** basic stack manipulation
 */
 LUA_API int   (lua_absindex) (lua_State *L, int idx);
+/**
+ * 返回当前当前函数调用栈上元素的个数
+ */
 LUA_API int   (lua_gettop) (lua_State *L);
+/**
+ * 设置栈顶为 idx 位置，
+ * idx > 0 时, idx是相对于当前函数调用，L->top = (func + 1) + idx,
+ * 并将原栈顶与新栈顶之间的元素设为 nil.
+ *  
+ * idx < 0 时, L->top += idx + 1
+ */
 LUA_API void  (lua_settop) (lua_State *L, int idx);
 LUA_API void  (lua_pushvalue) (lua_State *L, int idx);
 LUA_API void  (lua_rotate) (lua_State *L, int idx, int n);
 LUA_API void  (lua_copy) (lua_State *L, int fromidx, int toidx);
+/**
+ * 检测栈空间是否足够，不够的话会自动增长，栈空间总量有限制
+ *
+ * n: 所需要的栈大小
+ * 返回值: 0 足够，1 不够
+ */
 LUA_API int   (lua_checkstack) (lua_State *L, int n);
 
 LUA_API void  (lua_xmove) (lua_State *from, lua_State *to, int n);
@@ -173,12 +192,25 @@ LUA_API int             (lua_isstring) (lua_State *L, int idx);
 LUA_API int             (lua_iscfunction) (lua_State *L, int idx);
 LUA_API int             (lua_isinteger) (lua_State *L, int idx);
 LUA_API int             (lua_isuserdata) (lua_State *L, int idx);
+/**
+ * 获取 id 位置元素 类型 tag
+ * nil 则返回 LUA_TNONE
+ */
 LUA_API int             (lua_type) (lua_State *L, int idx);
 LUA_API const char     *(lua_typename) (lua_State *L, int tp);
 
 LUA_API lua_Number      (lua_tonumberx) (lua_State *L, int idx, int *isnum);
+/**
+ * 栈idx位置元素若为 lua_Integer类型，则返回，若pisum 非 NULL， 置 *pisum 为1，
+ * 否则置 pisum 为 0.
+ */
 LUA_API lua_Integer     (lua_tointegerx) (lua_State *L, int idx, int *isnum);
+/**
+ * 若 idx 位置不存在元素, 就是nil, 返回false，若存在元素且元素不是 flase，
+ * 则返回true, 即使是整数0也返回true
+ */
 LUA_API int             (lua_toboolean) (lua_State *L, int idx);
+/* 将栈idx位置元素转成字符串, 元素只能是Number或TString类型 */
 LUA_API const char     *(lua_tolstring) (lua_State *L, int idx, size_t *len);
 LUA_API size_t          (lua_rawlen) (lua_State *L, int idx);
 LUA_API lua_CFunction   (lua_tocfunction) (lua_State *L, int idx);
@@ -213,6 +245,10 @@ LUA_API void  (lua_arith) (lua_State *L, int op);
 #define LUA_OPLE	2
 
 LUA_API int   (lua_rawequal) (lua_State *L, int idx1, int idx2);
+/**
+ * 比较栈位置idx1, idx2上两个数的大小
+ * op 为上面宏定义的3个值: LUA_OPEQ, LUA_OPLT, LUA_OPLE
+ */
 LUA_API int   (lua_compare) (lua_State *L, int idx1, int idx2, int op);
 
 
@@ -222,6 +258,9 @@ LUA_API int   (lua_compare) (lua_State *L, int idx1, int idx2, int op);
 LUA_API void        (lua_pushnil) (lua_State *L);
 LUA_API void        (lua_pushnumber) (lua_State *L, lua_Number n);
 LUA_API void        (lua_pushinteger) (lua_State *L, lua_Integer n);
+/**
+ * 将字符串s的指定长度len压入栈中
+ */
 LUA_API const char *(lua_pushlstring) (lua_State *L, const char *s, size_t len);
 LUA_API const char *(lua_pushstring) (lua_State *L, const char *s);
 LUA_API const char *(lua_pushvfstring) (lua_State *L, const char *fmt,
@@ -245,6 +284,9 @@ LUA_API int (lua_rawgeti) (lua_State *L, int idx, lua_Integer n);
 LUA_API int (lua_rawgetp) (lua_State *L, int idx, const void *p);
 
 LUA_API void  (lua_createtable) (lua_State *L, int narr, int nrec);
+/**
+ * 分配一个大小为 size 的Udata型数据在栈顶，并返回Udata数据区域的指针
+ */
 LUA_API void *(lua_newuserdata) (lua_State *L, size_t sz);
 LUA_API int   (lua_getmetatable) (lua_State *L, int objindex);
 LUA_API int  (lua_getuservalue) (lua_State *L, int idx);
@@ -255,6 +297,9 @@ LUA_API int  (lua_getuservalue) (lua_State *L, int idx);
 */
 LUA_API void  (lua_setglobal) (lua_State *L, const char *name);
 LUA_API void  (lua_settable) (lua_State *L, int idx);
+/**
+ * 可以用来为lua lib设置属性, 比如 math.pi, math.huge
+ */
 LUA_API void  (lua_setfield) (lua_State *L, int idx, const char *k);
 LUA_API void  (lua_seti) (lua_State *L, int idx, lua_Integer n);
 LUA_API void  (lua_rawset) (lua_State *L, int idx);
@@ -278,6 +323,9 @@ LUA_API int   (lua_pcallk) (lua_State *L, int nargs, int nresults, int errfunc,
 LUA_API int   (lua_load) (lua_State *L, lua_Reader reader, void *dt,
                           const char *chunkname, const char *mode);
 
+/*
+ * dump lua 函数（闭包）,若是其他类型直接返回 1
+ */
 LUA_API int (lua_dump) (lua_State *L, lua_Writer writer, void *data, int strip);
 
 
@@ -354,8 +402,14 @@ LUA_API void      (lua_setallocf) (lua_State *L, lua_Alloc f, void *ud);
 #define lua_isboolean(L,n)	(lua_type(L, (n)) == LUA_TBOOLEAN)
 #define lua_isthread(L,n)	(lua_type(L, (n)) == LUA_TTHREAD)
 #define lua_isnone(L,n)		(lua_type(L, (n)) == LUA_TNONE)
+/**
+ * 判断lua的类型是否是LUA_TNONE或LUA_TNIL
+ */
 #define lua_isnoneornil(L, n)	(lua_type(L, (n)) <= 0)
 
+/**
+ * 将字符串压入栈中, 去除字符串末尾的 '\0'
+ */
 #define lua_pushliteral(L, s)	\
 	lua_pushlstring(L, "" s, (sizeof(s)/sizeof(char))-1)
 

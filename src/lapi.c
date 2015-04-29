@@ -40,6 +40,7 @@ const char lua_ident[] =
 #define NONVALIDVALUE		cast(TValue *, luaO_nilobject)
 
 /* corresponding test */
+/* o 是否有效，即 o 不是 nil */
 #define isvalid(o)	((o) != luaO_nilobject)
 
 /* test for pseudo index */
@@ -93,7 +94,12 @@ static void growstack (lua_State *L, void *ud) {
   luaD_growstack(L, size);
 }
 
-
+/**
+ * 检测栈空间是否足够，不够的话会自动增长，栈空间总量有限制
+ *
+ * n: 所需要的栈大小
+ * 返回值: 0 足够，1 不够
+ */
 LUA_API int lua_checkstack (lua_State *L, int n) {
   int res;
   CallInfo *ci = L->ci;
@@ -162,12 +168,22 @@ LUA_API int lua_absindex (lua_State *L, int idx) {
          : cast_int(L->top - L->ci->func + idx);
 }
 
-
+/**
+ * 返回当前当前函数调用栈上元素的个数
+ */
 LUA_API int lua_gettop (lua_State *L) {
   return cast_int(L->top - (L->ci->func + 1));
 }
 
 
+/**
+ * 设置栈顶为 idx 位置，
+ * idx > 0 时, idx是相对于当前函数调用，L->top = (func + 1) + idx,
+ * func + 1 位置应该是表示函数参数的个数，
+ * 并将原栈顶与新栈顶之间的元素设为 nil.
+ *  
+ * idx < 0 时, L->top += idx + 1
+ */
 LUA_API void lua_settop (lua_State *L, int idx) {
   StkId func = L->ci->func;
   lua_lock(L);
@@ -233,6 +249,7 @@ LUA_API void lua_copy (lua_State *L, int fromidx, int toidx) {
 }
 
 
+/* 将栈位置 idx 的对象复制到栈顶 */
 LUA_API void lua_pushvalue (lua_State *L, int idx) {
   lua_lock(L);
   setobj2s(L, L->top, index2addr(L, idx));
@@ -247,6 +264,10 @@ LUA_API void lua_pushvalue (lua_State *L, int idx) {
 */
 
 
+/**
+ * 获取 id 位置元素 类型 tag
+ * nil 则返回 LUA_TNONE
+ */
 LUA_API int lua_type (lua_State *L, int idx) {
   StkId o = index2addr(L, idx);
   return (isvalid(o) ? ttnov(o) : LUA_TNONE);
@@ -352,6 +373,10 @@ LUA_API lua_Number lua_tonumberx (lua_State *L, int idx, int *pisnum) {
 }
 
 
+/**
+ * 栈idx位置元素若为 lua_Integer类型，则返回，若pisum 非 NULL， 置 *pisum 为1，
+ * 否则置 pisum 为 0.
+ */
 LUA_API lua_Integer lua_tointegerx (lua_State *L, int idx, int *pisnum) {
   lua_Integer res;
   const TValue *o = index2addr(L, idx);
@@ -362,16 +387,27 @@ LUA_API lua_Integer lua_tointegerx (lua_State *L, int idx, int *pisnum) {
   return res;
 }
 
-
+/**
+ * 若 idx 位置不存在元素, 就是nil, 返回false，若存在元素且元素不是 flase，
+ * 则返回true, 即使是整数0也返回true
+ */
 LUA_API int lua_toboolean (lua_State *L, int idx) {
   const TValue *o = index2addr(L, idx);
   return !l_isfalse(o);
 }
 
-
+/**
+ * 将idx位置元素转成字符串, 本身就是TString类型的话，直接获取内部的字符串指针，
+ * 非字符串的话只能对Number类型进行转换，转换成功的话返回字符串首地址，转换后
+ * 的字符串长度保存在len中（len 为 NULL 则不保存）. 
+ * 若元素不是 TString 也不是 Number类型，则转换失败，返回 NULL.
+ * 
+ * 转换完成后，栈位置idx指向的元素就变成了转换后的字符串类型.
+ */
 LUA_API const char *lua_tolstring (lua_State *L, int idx, size_t *len) {
   StkId o = index2addr(L, idx);
   if (!ttisstring(o)) {
+	  /* 类型不是string */
     if (!cvt2str(o)) {  /* not convertible? */
       if (len != NULL) *len = 0;
       return NULL;
@@ -983,7 +1019,9 @@ LUA_API int lua_load (lua_State *L, lua_Reader reader, void *data,
   return status;
 }
 
-
+/*
+ * dump lua 函数（闭包）,若是其他类型直接返回 1
+ */
 LUA_API int lua_dump (lua_State *L, lua_Writer writer, void *data, int strip) {
   int status;
   TValue *o;
@@ -1152,12 +1190,18 @@ LUA_API void lua_setallocf (lua_State *L, lua_Alloc f, void *ud) {
 }
 
 
+/**
+ * 分配一个大小为 size 的Udata型数据在栈顶，并返回Udata数据区域的指针
+ */
 LUA_API void *lua_newuserdata (lua_State *L, size_t size) {
   Udata *u;
   lua_lock(L);
   luaC_checkGC(L);
   u = luaS_newudata(L, size);
+
+  /* 将Udata u 压入栈中 */
   setuvalue(L, L->top, u);
+  /* 栈顶指针加1 */
   api_incr_top(L);
   lua_unlock(L);
   return getudatamem(u);

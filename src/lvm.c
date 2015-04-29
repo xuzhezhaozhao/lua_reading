@@ -107,6 +107,7 @@ static int tointeger_aux (const TValue *obj, lua_Integer *p, int mode) {
   }
   else if (cvt2num(obj) &&
             luaO_str2num(svalue(obj), &v) == tsvalue(obj)->len + 1) {
+	  /* 先将字符串转为 number类型, 在 goto 重新转 number 为 整数 */
     obj = &v;
     goto again;  /* convert result from 'luaO_str2num' to an integer */
   }

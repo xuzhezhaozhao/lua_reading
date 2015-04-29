@@ -46,9 +46,14 @@ struct lua_longjmp;  /* defined in ldo.c */
 #define KGC_EMERGENCY	1	/* gc was forced by an allocation failure */
 
 
+/**
+ * Lua用一张hash table来管理所有的字符串资源
+ */
 typedef struct stringtable {
+  /* 指向字符串hash表 */
   TString **hash;
   int nuse;  /* number of elements */
+  /* hash table 大小 */
   int size;
 } stringtable;
 
@@ -172,6 +177,7 @@ struct lua_State {
 };
 
 
+/* globale state */
 #define G(L)	(L->l_G)
 
 
@@ -205,6 +211,10 @@ union GCUnion {
 
 
 /* macro to convert a Lua object into a GCObject */
+/*
+ * 实际就是返回指向每个可回收对象头部都有的 CommonHeader里的 GCobject 那个东西
+ * 的指针
+ */
 #define obj2gco(v) \
 	check_exp(novariant((v)->tt) < LUA_TDEADKEY, (&(cast_u(v)->gc)))
 

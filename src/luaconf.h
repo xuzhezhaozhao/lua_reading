@@ -523,7 +523,7 @@
 
 
 /* The following definitions are good for most cases here */
-
+/* 整数转字符串 */
 #define LUA_INTEGER_FMT		"%" LUA_INTEGER_FRMLEN "d"
 #define lua_integer2str(s,n)	sprintf((s), LUA_INTEGER_FMT, (n))
 

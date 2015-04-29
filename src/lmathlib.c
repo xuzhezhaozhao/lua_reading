@@ -92,7 +92,9 @@ static int math_toint (lua_State *L) {
   return 1;
 }
 
-
+/**
+ * 浮点数转整数
+ */
 static void pushnumint (lua_State *L, lua_Number d) {
   lua_Integer n;
   if (lua_numbertointeger(d, &n))  /* does 'd' fit in an integer? */
@@ -180,6 +182,7 @@ static int math_log (lua_State *L) {
   lua_Number x = luaL_checknumber(L, 1);
   lua_Number res;
   if (lua_isnoneornil(L, 2))
+	  /* 没有第二个参数的情况 */
     res = l_mathop(log)(x);
   else {
     lua_Number base = luaL_checknumber(L, 2);
@@ -268,6 +271,9 @@ static int math_random (lua_State *L) {
 }
 
 
+/**
+ * 随机数种子, 用栈上第一个数设置种子
+ */
 static int math_randomseed (lua_State *L) {
   l_srand((unsigned int)(lua_Integer)luaL_checknumber(L, 1));
   (void)rand(); /* discard first value to avoid undesirable correlations */
@@ -399,6 +405,11 @@ LUAMOD_API int luaopen_math (lua_State *L) {
   lua_setfield(L, -2, "maxinteger");
   lua_pushinteger(L, LUA_MININTEGER);
   lua_setfield(L, -2, "mininteger");
+
+  /* test */
+  lua_pushstring(L, "0326");
+  lua_setfield(L, -2, "amazing");
+
   return 1;
 }
 

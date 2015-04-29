@@ -45,7 +45,10 @@
 
 
 
-
+/** 
+ * string.len 方法的实现，若参数不是字符串，而是Number类型，则会现将Number
+ * 类型转成字符串，再返回其长度.
+ */
 static int str_len (lua_State *L) {
   size_t l;
   luaL_checklstring(L, 1, &l);
@@ -62,6 +65,12 @@ static lua_Integer posrelat (lua_Integer pos, size_t len) {
 }
 
 
+/**
+ * string.sub 方法实现，栈中第一个元素保存TString（可由Number类型转换而来）,
+ * 第二个元素保存截取首位置，第三个元素可选，默认为-1;
+ * start < 1 截取为1，end > length, 截取为 length;
+ * start > end 返回 空字符串
+ */
 static int str_sub (lua_State *L) {
   size_t l;
   const char *s = luaL_checklstring(L, 1, &l);
@@ -76,10 +85,12 @@ static int str_sub (lua_State *L) {
 }
 
 
+/* 逆转字符串，使用buffer */
 static int str_reverse (lua_State *L) {
   size_t l, i;
   luaL_Buffer b;
   const char *s = luaL_checklstring(L, 1, &l);
+  /* 分配大小至少为 l 的 buffer */
   char *p = luaL_buffinitsize(L, &b, l);
   for (i = 0; i < l; i++)
     p[i] = s[l - i - 1];
@@ -114,6 +125,11 @@ static int str_upper (lua_State *L) {
 }
 
 
+/*
+ * 健壮性:
+ * 1. 检测加法运算是否溢出
+ * 2. 最终的字符串大小有限制 
+ */
 static int str_rep (lua_State *L) {
   size_t l, lsep;
   const char *s = luaL_checklstring(L, 1, &l);
@@ -140,6 +156,12 @@ static int str_rep (lua_State *L) {
 }
 
 
+/*
+ * 健壮性:
+ * 1. 加法运算是否溢出
+ * 2. 存放返回值的栈是否会溢出
+ *
+ */
 static int str_byte (lua_State *L) {
   size_t l;
   const char *s = luaL_checklstring(L, 1, &l);
@@ -158,7 +180,10 @@ static int str_byte (lua_State *L) {
   return n;
 }
 
-
+/*
+ * 健壮性:
+ * 1. 整数是否过大
+ */
 static int str_char (lua_State *L) {
   int n = lua_gettop(L);  /* number of arguments */
   int i;
@@ -174,6 +199,13 @@ static int str_char (lua_State *L) {
 }
 
 
+/**
+ * 向buffer内写入数据
+ * 
+ * b: 要写入数据的首地址
+ * size: 要写入数据的大小
+ * B: buffer指针
+ */
 static int writer (lua_State *L, const void *b, size_t size, void *B) {
   (void)L;
   luaL_addlstring((luaL_Buffer *) B, (const char *)b, size);
@@ -181,6 +213,7 @@ static int writer (lua_State *L, const void *b, size_t size, void *B) {
 }
 
 
+/* TODO 实现细节? */
 static int str_dump (lua_State *L) {
   luaL_Buffer b;
   int strip = lua_toboolean(L, 2);
@@ -194,7 +227,7 @@ static int str_dump (lua_State *L) {
 }
 
 
-
+/* TODO regex */
 /*
 ** {======================================================
 ** PATTERN MATCHING
@@ -791,6 +824,7 @@ static int str_gsub (lua_State *L) {
 
 
 
+/* TODO */
 /*
 ** {======================================================
 ** STRING FORMAT
@@ -810,6 +844,10 @@ static int str_gsub (lua_State *L) {
 #define MAX_FORMAT	(sizeof(FLAGS) + 2 + 10)
 
 
+/**
+ * string.format %q 的实现;
+ * 对 arg 位置的字符串进行处理，为特殊字符加上转义字符, 并用双引号将其包起来
+ */
 static void addquoted (lua_State *L, luaL_Buffer *b, int arg) {
   size_t l;
   const char *s = luaL_checklstring(L, arg, &l);
@@ -859,6 +897,7 @@ static const char *scanformat (lua_State *L, const char *strfrmt, char *form) {
 /*
 ** add length modifier into formats
 */
+/* 如 l, ll 这种东西 */
 static void addlenmod (char *form, const char *lenmod) {
   size_t l = strlen(form);
   size_t lm = strlen(lenmod);
@@ -868,7 +907,9 @@ static void addlenmod (char *form, const char *lenmod) {
   form[l + lm] = '\0';
 }
 
-
+/**
+ * sting.format 实现
+ */
 static int str_format (lua_State *L) {
   int top = lua_gettop(L);
   int arg = 1;
@@ -944,6 +985,7 @@ static int str_format (lua_State *L) {
 /* }====================================================== */
 
 
+/* TODO */
 /*
 ** {======================================================
 ** PACK/UNPACK

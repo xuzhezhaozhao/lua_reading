@@ -152,13 +152,15 @@ void luaO_arith (lua_State *L, int op, const TValue *p1, const TValue *p2,
   luaT_trybinTM(L, p1, p2, res, cast(TMS, op - LUA_OPADD + TM_ADD));
 }
 
-
+/* 返回字符的16进制大小 */
 int luaO_hexavalue (int c) {
   if (lisdigit(c)) return c - '0';
   else return ltolower(c) - 'a' + 10;
 }
 
-
+/**
+ * 首地址为 *s 的字符串转成整数是否为 负数
+ */
 static int isneg (const char **s) {
   if (**s == '-') { (*s)++; return 1; }
   else if (**s == '+') (*s)++;
@@ -236,6 +238,10 @@ static lua_Number lua_strx2number (const char *s, char **endptr) {
 /* }====================================================== */
 
 
+/**
+ * 字符串转 lua_Number类型, 利用标准函数 strtod 实现,
+ * 结果保存在 *result 中，成功返回字符串首地址，失败返回NULL
+ */
 static const char *l_str2d (const char *s, lua_Number *result) {
   char *endptr;
   if (strpbrk(s, "nN"))  /* reject 'inf' and 'nan' */
@@ -250,6 +256,11 @@ static const char *l_str2d (const char *s, lua_Number *result) {
 }
 
 
+/**
+ * 字符串转整数，可处理16进制数，结果保存在 *result 中,
+ * 成功则返回字符串首地址，失败返回NULL, 成功是指全部字符串都被处理了, 
+ * 不是尽可能多的解析.
+ */
 static const char *l_str2int (const char *s, lua_Integer *result) {
   lua_Unsigned a = 0;
   int empty = 1;
@@ -279,6 +290,12 @@ static const char *l_str2int (const char *s, lua_Integer *result) {
 }
 
 
+/**
+ * 字符串转 为 number 类型, 先尝试转为 lua_Integer 类型，
+ * 失败后尝试转为lua_Number类型,
+ * 
+ * 成功则返回字符串长度，失败返回0
+ */
 size_t luaO_str2num (const char *s, TValue *o) {
   lua_Integer i; lua_Number n;
   const char *e;
@@ -328,12 +345,15 @@ void luaO_tostring (lua_State *L, StkId obj) {
   else {
     len = lua_number2str(buff, fltvalue(obj));
 #if !defined(LUA_COMPAT_FLOATSTRING)
+	/* strspn 这个函数少见, 功能也比较逗，用在这倒也正合适 */
+	/* 其实直接查字符串中有没有 '.' 字符也可以 */
     if (buff[strspn(buff, "-0123456789")] == '\0') {  /* looks like an int? */
       buff[len++] = '.';
       buff[len++] = '0';  /* adds '.0' to result */
     }
 #endif
   }
+  /* 将obj 设为类型TString对象 */
   setsvalue2s(L, obj, luaS_newlstr(L, buff, len));
 }
 

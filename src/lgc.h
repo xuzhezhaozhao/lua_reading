@@ -93,11 +93,16 @@
 
 #define otherwhite(g)	((g)->currentwhite ^ WHITEBITS)
 #define isdeadm(ow,m)	(!(((m) ^ WHITEBITS) & (ow)))
+/* dead: 资源v已经无引用， 但还没有被垃圾收集器回收 */
 #define isdead(g,v)	isdeadm(otherwhite(g), (v)->marked)
 
+/* 重新将对象标记为白色 */
 #define changewhite(x)	((x)->marked ^= WHITEBITS)
 #define gray2black(x)	l_setbit((x)->marked, BLACKBIT)
 
+/**
+ * 应该与gc有关, 标记对象当前的状态
+ */
 #define luaC_white(g)	cast(lu_byte, (g)->currentwhite & WHITEBITS)
 
 
@@ -127,6 +132,10 @@ LUAI_FUNC void luaC_freeallobjects (lua_State *L);
 LUAI_FUNC void luaC_step (lua_State *L);
 LUAI_FUNC void luaC_runtilstate (lua_State *L, int statesmask);
 LUAI_FUNC void luaC_fullgc (lua_State *L, int isemergency);
+/**
+ * tt: tag, 对象类型
+ * sz: 对象大小
+ */
 LUAI_FUNC GCObject *luaC_newobj (lua_State *L, int tt, size_t sz);
 LUAI_FUNC void luaC_barrier_ (lua_State *L, GCObject *o, GCObject *v);
 LUAI_FUNC void luaC_barrierback_ (lua_State *L, Table *o);

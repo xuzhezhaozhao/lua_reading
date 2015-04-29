@@ -74,6 +74,11 @@ l_noret luaM_toobig (lua_State *L) {
 /*
 ** generic allocation routine.
 */
+/**
+ * 创建对象的函数 luaM_newobject 也调用此函数(lmem.h):
+ *  #define luaM_newobject(L,tag,s)	luaM_realloc_(L, NULL, tag, (s))
+ *  
+ */
 void *luaM_realloc_ (lua_State *L, void *block, size_t osize, size_t nsize) {
   void *newblock;
   global_State *g = G(L);
