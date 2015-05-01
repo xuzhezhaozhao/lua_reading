@@ -9,6 +9,7 @@
 
 #include "lprefix.h"
 
+#include <stdio.h>
 
 /*
 ** Implementation of tables (aka arrays, objects, or hash tables).
@@ -57,8 +58,14 @@
 #define MAXHBITS	(MAXABITS - 1)
 
 
+/**
+ * t 是表，n 为 hash 值, 返回该hash值对应 node 数组中的位置的地址
+ */
 #define hashpow2(t,n)		(gnode(t, lmod((n), sizenode(t))))
 
+/**
+ * t 是表，n 为字符串 hash 值, 返回字符串在 node 数组中的位置的地址
+ */
 #define hashstr(t,str)		hashpow2(t, (str)->hash)
 #define hashboolean(t,p)	hashpow2(t, p)
 #define hashint(t,i)		hashpow2(t, i)
@@ -68,6 +75,7 @@
 ** for some types, it is better to avoid modulus by power of 2, as
 ** they tend to have many 2 factors.
 */
+/* 比如浮点数 */
 #define hashmod(t,n)	(gnode(t, ((n) % ((sizenode(t)-1)|1))))
 
 
@@ -116,6 +124,7 @@ static Node *hashfloat (const Table *t, lua_Number n) {
 ** returns the 'main' position of an element in a table (that is, the index
 ** of its hash value)
 */
+/* 获取 key 的 hash 值 在 table 的 node hash 表中的对应的索引值 */
 static Node *mainposition (const Table *t, const TValue *key) {
   switch (ttype(key)) {
     case LUA_TNUMINT:
@@ -163,6 +172,10 @@ static unsigned int arrayindex (const TValue *key) {
 ** elements in the array part, then elements in the hash part. The
 ** beginning of a traversal is signaled by 0.
 */
+/**
+ * 查找 key 是第几个，先从 array 数组，再是 node hash table, 
+ * key 为 nil 返回 0，key 若不存在则会报运行时错误
+ */
 static unsigned int findindex (lua_State *L, Table *t, StkId key) {
   unsigned int i;
   if (ttisnil(key)) return 0;  /* first iteration */
@@ -190,6 +203,15 @@ static unsigned int findindex (lua_State *L, Table *t, StkId key) {
 }
 
 
+/**
+ * 首先查找 key 在 table 中的索引顺序位置，查找顺序是先array，再 
+ * node hash table, 然后将这个位置后的第一个非 nil 元素的 key, value 
+ * 分别存入 key 和 key + 1 两个位置, 对于 array 来说，key 就是数组下标加 1.
+ * 
+ * key 如果是栈顶位置的话，新压入的 key, value 对就在栈顶.
+ * 
+ * 如果找到非 nil 元素，返回 1, 否则返回 0.
+ */
 int luaH_next (lua_State *L, Table *t, StkId key) {
   unsigned int i = findindex(L, t, key);  /* find original element */
   for (; i < t->sizearray; i++) {  /* try first array part */
@@ -298,6 +320,9 @@ static int numusehash (const Table *t, unsigned int *nums,
 }
 
 
+/**
+ * 重新分配 table 中 array 的大小为 size, 增大的话新元素置为 nil
+ */
 static void setarrayvector (lua_State *L, Table *t, unsigned int size) {
   unsigned int i;
   luaM_reallocvector(L, t->array, t->sizearray, size, TValue);
@@ -307,6 +332,10 @@ static void setarrayvector (lua_State *L, Table *t, unsigned int size) {
 }
 
 
+/**
+ * 重新分配 table 中 node hash 表的大小为 2 ^ ceil( log2(size) ), size 为 0 
+ * 表示删除 node 表.
+ */
 static void setnodevector (lua_State *L, Table *t, unsigned int size) {
   int lsize;
   if (size == 0) {  /* no elements to hash part? */
@@ -321,6 +350,7 @@ static void setnodevector (lua_State *L, Table *t, unsigned int size) {
     size = twoto(lsize);
     t->node = luaM_newvector(L, size, Node);
     for (i = 0; i < (int)size; i++) {
+	  /* 初始化 node hash 表中每个元素 */
       Node *n = gnode(t, i);
       gnext(n) = 0;
       setnilvalue(wgkey(n));
@@ -332,6 +362,10 @@ static void setnodevector (lua_State *L, Table *t, unsigned int size) {
 }
 
 
+/**
+ * table sequence 的大小改为 nasize，node hash 表的大小改为 nhsize;
+ * 并会重新调整 array 和 node hash table 中的数据
+ */
 void luaH_resize (lua_State *L, Table *t, unsigned int nasize,
                                           unsigned int nhsize) {
   unsigned int i;
@@ -347,6 +381,8 @@ void luaH_resize (lua_State *L, Table *t, unsigned int nasize,
     t->sizearray = nasize;
     /* re-insert elements from vanishing slice */
     for (i=nasize; i<oldasize; i++) {
+      /* lua 其实为1，所以下面的 key 是 i + 1 */
+      /* 都会插入到 node hash table 中 */
       if (!ttisnil(&t->array[i]))
         luaH_setint(L, t, i + 1, &t->array[i]);
     }
@@ -400,6 +436,7 @@ static void rehash (lua_State *L, Table *t, const TValue *ek) {
 */
 
 
+/* 新建 Table */
 Table *luaH_new (lua_State *L) {
   GCObject *o = luaC_newobj(L, LUA_TTABLE, sizeof(Table));
   Table *t = gco2t(o);
@@ -420,6 +457,10 @@ void luaH_free (lua_State *L, Table *t) {
 }
 
 
+/**
+ * 获取一个 free pos, 并且更新 t->lastfree;
+ * 没有 free pos 就返回 NULL
+ */
 static Node *getfreepos (Table *t) {
   while (t->lastfree > t->node) {
     t->lastfree--;
@@ -438,6 +479,11 @@ static Node *getfreepos (Table *t) {
 ** put new key in its main position; otherwise (colliding node is in its main
 ** position), new key goes to an empty position.
 */
+/**
+ * 在hash table中插入一个key, 返回 key 所对应的值的地址 
+ * 
+ * TODO
+ */
 TValue *luaH_newkey (lua_State *L, Table *t, const TValue *key) {
   Node *mp;
   TValue aux;
@@ -494,11 +540,17 @@ TValue *luaH_newkey (lua_State *L, Table *t, const TValue *key) {
 /*
 ** search function for integers
 */
+/**
+ * 在Table中查找属性 key 的值, key 是一个整数类型，存在返回其值，否则返回 nil;
+ * lua中 table 模拟的数组下标是1开始的, 若key范围在table模拟的array内，则会返回
+ * array对应位置的值，否则会在node数组中查找
+ */
 const TValue *luaH_getint (Table *t, lua_Integer key) {
   /* (1 <= key && key <= t->sizearray) */
   if (l_castS2U(key - 1) < t->sizearray)
     return &t->array[key - 1];
   else {
+    /* 超过了数组大小, 则在node数组中查找 */
     Node *n = hashint(t, key);
     for (;;) {  /* check whether 'key' is somewhere in the chain */
       if (ttisinteger(gkey(n)) && ivalue(gkey(n)) == key)
@@ -517,7 +569,11 @@ const TValue *luaH_getint (Table *t, lua_Integer key) {
 /*
 ** search function for short strings
 */
+/**
+ * 在 Table中查找 属性 key 的值, key 是一个短字符串， 存在返回其值，否则返回 nil
+ */
 const TValue *luaH_getstr (Table *t, TString *key) {
+  /* 获得 key 字符串在表 node 数组中的位置 */
   Node *n = hashstr(t, key);
   lua_assert(key->tt == LUA_TSHRSTR);
   for (;;) {  /* check whether 'key' is somewhere in the chain */
@@ -537,6 +593,9 @@ const TValue *luaH_getstr (Table *t, TString *key) {
 /*
 ** main search function
 */
+/**
+ * 返回 t[key]
+ */
 const TValue *luaH_get (Table *t, const TValue *key) {
   switch (ttype(key)) {
     case LUA_TSHRSTR: return luaH_getstr(t, tsvalue(key));
@@ -569,6 +628,9 @@ const TValue *luaH_get (Table *t, const TValue *key) {
 ** beware: when using this function you probably need to check a GC
 ** barrier and invalidate the TM cache.
 */
+/**
+ * 若表中没有key, 则会新建这个key, 返回 key 对应的值的地址 
+ */
 TValue *luaH_set (lua_State *L, Table *t, const TValue *key) {
   const TValue *p = luaH_get(t, key);
   if (p != luaO_nilobject)
@@ -577,12 +639,16 @@ TValue *luaH_set (lua_State *L, Table *t, const TValue *key) {
 }
 
 
+/**
+ * 向表中插入 key-value 对, key 存在就用 value 覆盖原来的值, 否则就是新建对
+ */
 void luaH_setint (lua_State *L, Table *t, lua_Integer key, TValue *value) {
   const TValue *p = luaH_getint(t, key);
   TValue *cell;
   if (p != luaO_nilobject)
     cell = cast(TValue *, p);
   else {
+    /* key 超过了 array 大小, 插入到 node hash table 中 */
     TValue k;
     setivalue(&k, key);
     cell = luaH_newkey(L, t, &k);
@@ -591,7 +657,15 @@ void luaH_setint (lua_State *L, Table *t, lua_Integer key, TValue *value) {
 }
 
 
+/**
+ * 在hash table 中查找最小的这样一个整数i >= j, 
+ * 使 t[i] != nil && t[i + 1] == nil
+ * 
+ * 对查找过程进行了优化, 不是单纯的线性查找，最好情况下可以用二分查找, 
+ * 但最坏情况也有可能退化为线性查找
+ */
 static int unbound_search (Table *t, unsigned int j) {
+	printf("unbound_search, j = %d\n", j);
   unsigned int i = j;  /* i is zero or a present index */
   j++;
   /* find 'i' and 'j' such that i is present and j is not */
@@ -601,10 +675,12 @@ static int unbound_search (Table *t, unsigned int j) {
       /* table was built with bad purposes: resort to linear search */
       i = 1;
       while (!ttisnil(luaH_getint(t, i))) i++;
+	  /* t[i] is nil, t[i - 1] is not nil */
       return i - 1;
     }
     j *= 2;
   }
+  /* t[j] is nil */
   /* now do a binary search between them */
   while (j - i > 1) {
     unsigned int m = (i+j)/2;
@@ -619,8 +695,10 @@ static int unbound_search (Table *t, unsigned int j) {
 ** Try to find a boundary in table 't'. A 'boundary' is an integer index
 ** such that t[i] is non-nil and t[i+1] is nil (and 0 if t[1] is nil).
 */
+/* 先在 array 中找，再在 hash part 中找 */ 
 int luaH_getn (Table *t) {
   unsigned int j = t->sizearray;
+  printf("t->sizearray = %d\n", j);
   if (j > 0 && ttisnil(&t->array[j - 1])) {
     /* there is a boundary in the array part: (binary) search for it */
     unsigned int i = 0;

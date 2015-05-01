@@ -655,6 +655,9 @@ static void clearvalues (global_State *g, GCObject *l, GCObject *f) {
 }
 
 
+/**
+ * uv 的引用次数减一，为 0 时则将其回收
+ */
 void luaC_upvdeccount (lua_State *L, UpVal *uv) {
   lua_assert(uv->refcount > 0);
   uv->refcount--;

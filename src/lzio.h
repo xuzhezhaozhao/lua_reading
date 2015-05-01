@@ -36,6 +36,9 @@ typedef struct Mbuffer {
 #define luaZ_resetbuffer(buff) ((buff)->n = 0)
 
 
+/**
+ * 为 buff 重新分配 size 字节大小的空间
+ */
 #define luaZ_resizebuffer(L, buff, size) \
 	((buff)->buffer = luaM_reallocvchar(L, (buff)->buffer, \
 				(buff)->buffsize, size), \

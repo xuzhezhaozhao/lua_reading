@@ -31,6 +31,7 @@
 #define LUA_SIGNATURE	"\x1bLua"
 
 /* option for multiple returns in 'lua_pcall' and 'lua_call' */
+/*　nres 为这个值表示函数所有的返回值都将 push 到栈上 */
 #define LUA_MULTRET	(-1)
 
 
@@ -69,6 +70,7 @@ typedef struct lua_State lua_State;
 #define LUA_TUSERDATA		7
 #define LUA_TTHREAD		8
 
+/* tag 类型数量, 小技巧，方便编程 */
 #define LUA_NUMTAGS		9
 
 
@@ -235,6 +237,7 @@ LUA_API const void     *(lua_topointer) (lua_State *L, int idx);
 #define LUA_OPBXOR	9
 #define LUA_OPSHL	10
 #define LUA_OPSHR	11
+/* TODO 这是什么运算符 */
 #define LUA_OPUNM	12
 #define LUA_OPBNOT	13
 

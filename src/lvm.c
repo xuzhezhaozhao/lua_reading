@@ -352,6 +352,7 @@ int luaV_equalobj (lua_State *L, const TValue *t1, const TValue *t2) {
 
 
 /* macro used by 'luaV_concat' to ensure that element at 'o' is a string */
+/* 是返回1，并将 o 转为 string */
 #define tostring(L,o)  \
 	(ttisstring(o) || (cvt2str(o) && (luaO_tostring(L, o), 1)))
 
@@ -359,6 +360,10 @@ int luaV_equalobj (lua_State *L, const TValue *t1, const TValue *t2) {
 ** Main operation for concatenation: concat 'total' values in the stack,
 ** from 'L->top - total' up to 'L->top - 1'.
 */
+/**
+ * 在 lua_concat (lapi.h) 中被调用, 若不是数字或字符串，
+ * 将使用 __concat 元方法
+ */
 void luaV_concat (lua_State *L, int total) {
   lua_assert(total >= 2);
   do {
@@ -402,6 +407,7 @@ void luaV_concat (lua_State *L, int total) {
 /*
 ** Main operation 'ra' = #rb'.
 */
+/* 有元表方法先会调用元表方法 __len */
 void luaV_objlen (lua_State *L, StkId ra, const TValue *rb) {
   const TValue *tm;
   switch (ttnov(rb)) {

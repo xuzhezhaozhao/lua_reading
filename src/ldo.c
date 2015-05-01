@@ -155,6 +155,9 @@ int luaD_rawrunprotected (lua_State *L, Pfunc f, void *ud) {
 /* }====================================================== */
 
 
+/**
+ * 在对栈进行扩容后重新调整好栈的有关参数，相关指针需要重新赋值
+ */
 static void correctstack (lua_State *L, TValue *oldstack) {
   CallInfo *ci;
   UpVal *up;
@@ -173,7 +176,10 @@ static void correctstack (lua_State *L, TValue *oldstack) {
 /* some space for error handling */
 #define ERRORSTACKSIZE	(LUAI_MAXSTACK + 200)
 
-
+/**
+ * 重新分配栈空间, 并将原元素拷过去
+ * newsize: 新栈大小
+ */
 void luaD_reallocstack (lua_State *L, int newsize) {
   TValue *oldstack = L->stack;
   int lim = L->stacksize;
@@ -184,10 +190,14 @@ void luaD_reallocstack (lua_State *L, int newsize) {
     setnilvalue(L->stack + lim); /* erase new segment */
   L->stacksize = newsize;
   L->stack_last = L->stack + newsize - EXTRA_STACK;
+  /* 重新调整栈相关参数 */
   correctstack(L, oldstack);
 }
 
-
+/**
+ * 根据需要自动增长栈大小, 处理错误
+ * n: 还需要的栈空间大小
+ */
 void luaD_growstack (lua_State *L, int n) {
   int size = L->stacksize;
   if (size > LUAI_MAXSTACK)  /* error after extra size? */
@@ -310,6 +320,7 @@ static void tryfuncTM (lua_State *L, StkId func) {
 
 
 
+/* 获取函数调用信息 CallInfo */
 #define next_ci(L) (L->ci = (L->ci->next ? L->ci->next : luaE_extendCI(L)))
 
 

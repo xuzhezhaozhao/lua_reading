@@ -118,6 +118,7 @@ typedef struct global_State {
   lu_mem GCmemtrav;  /* memory traversed by the GC */
   lu_mem GCestimate;  /* an estimate of the non-garbage memory in use */
   stringtable strt;  /* hash table for strings */
+  /* see http://www.lua.org/manual/5.3/manual.html#4.5 about registry*/
   TValue l_registry;
   unsigned int seed;  /* randomized seed for hashes */
   lu_byte currentwhite;
@@ -158,6 +159,7 @@ struct lua_State {
   global_State *l_G;
   CallInfo *ci;  /* call info for current function */
   const Instruction *oldpc;  /* last pc traced */
+  /* 在这后面还有 EXTRA_STACK 个位置大小作为预留空间 */
   StkId stack_last;  /* last free slot in the stack */
   StkId stack;  /* stack base */
   UpVal *openupval;  /* list of open upvalues in this stack */

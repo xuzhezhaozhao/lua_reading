@@ -11,6 +11,9 @@
 #include "lobject.h"
 
 
+/**
+ * 有 n 个 upvalues 的闭包的大小
+ */
 #define sizeCclosure(n)	(cast(int, sizeof(CClosure)) + \
                          cast(int, sizeof(TValue)*((n)-1)))
 
@@ -41,6 +44,9 @@ struct UpVal {
 
 
 LUAI_FUNC Proto *luaF_newproto (lua_State *L);
+/**
+ * 新建一个有 n 个 upvalues 的闭包
+ */
 LUAI_FUNC CClosure *luaF_newCclosure (lua_State *L, int nelems);
 LUAI_FUNC LClosure *luaF_newLclosure (lua_State *L, int nelems);
 LUAI_FUNC void luaF_initupvals (lua_State *L, LClosure *cl);

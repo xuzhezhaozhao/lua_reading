@@ -50,7 +50,9 @@ typedef enum {
 
 #define fasttm(l,et,e)	gfasttm(G(l), et, e)
 
+/* 返回 tag x 对应的类型名 */
 #define ttypename(x)	luaT_typenames_[(x) + 1]
+/* 返回对象 x 的基本类型名 */
 #define objtypename(x)	ttypename(ttnov(x))
 
 LUAI_DDEC const char *const luaT_typenames_[LUA_TOTALTAGS];

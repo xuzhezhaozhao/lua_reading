@@ -97,7 +97,7 @@ typedef LUAI_UACINT l_uacInt;
 
 
 /**
- * e 不为 true 就打印 msg 字符串并退出
+ * 调试用, 实质为 assert 宏，e 不为 true 就打印 msg 字符串并退出
  */
 #define api_check(e,msg)	luai_apicheck((e) && msg)
 

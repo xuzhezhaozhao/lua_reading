@@ -163,18 +163,25 @@ typedef struct lua_TValue TValue;
 /* Macros to access values */
 /* 获取 Value 的 lua_Integer 值 */
 #define ivalue(o)	check_exp(ttisinteger(o), val_(o).i)
+/* 获取 Value 的 lua_Number 值, 浮点数 */
 #define fltvalue(o)	check_exp(ttisfloat(o), val_(o).n)
 #define nvalue(o)	check_exp(ttisnumber(o), \
 	(ttisinteger(o) ? cast_num(ivalue(o)) : fltvalue(o)))
+/* 获取 GCObject 指针 */
 #define gcvalue(o)	check_exp(iscollectable(o), val_(o).gc)
+/* 获取 light userdata 指针 */
 #define pvalue(o)	check_exp(ttislightuserdata(o), val_(o).p)
 /* 将指向GCObject的o转为指向TString的指针 */
 #define tsvalue(o)	check_exp(ttisstring(o), gco2ts(val_(o).gc))
+/* o转为指向Udata的指针 */
 #define uvalue(o)	check_exp(ttisfulluserdata(o), gco2u(val_(o).gc))
 #define clvalue(o)	check_exp(ttisclosure(o), gco2cl(val_(o).gc))
 #define clLvalue(o)	check_exp(ttisLclosure(o), gco2lcl(val_(o).gc))
+/* o转为指向 Closure 的指针 */
 #define clCvalue(o)	check_exp(ttisCclosure(o), gco2ccl(val_(o).gc))
+/* o转为指向lua_CFunction的指针 */
 #define fvalue(o)	check_exp(ttislcf(o), val_(o).f)
+/* o转为指向Table的指针 */
 #define hvalue(o)	check_exp(ttistable(o), gco2t(val_(o).gc))
 #define bvalue(o)	check_exp(ttisboolean(o), val_(o).b)
 #define thvalue(o)	check_exp(ttisthread(o), gco2th(val_(o).gc))
@@ -207,15 +214,22 @@ typedef struct lua_TValue TValue;
 #define setfltvalue(obj,x) \
   { TValue *io=(obj); val_(io).n=(x); settt_(io, LUA_TNUMFLT); }
 
+/* 将 obj 对象设为 int 类型，值为 x */
 #define setivalue(obj,x) \
   { TValue *io=(obj); val_(io).i=(x); settt_(io, LUA_TNUMINT); }
 
 /* 将 obj 对象设为nil */
 #define setnilvalue(obj) settt_(obj, LUA_TNIL)
 
+/**
+ * 将 obj 指向对象值设为 x , x 类型为CFunction , 同时更改其类型为 LUA_TLCF
+ */
 #define setfvalue(obj,x) \
   { TValue *io=(obj); val_(io).f=(x); settt_(io, LUA_TLCF); }
 
+/**
+ * x 就是一个指向一片内存区的指针, 即 light user data
+ */
 #define setpvalue(obj,x) \
   { TValue *io=(obj); val_(io).p=(x); settt_(io, LUA_TLIGHTUSERDATA); }
 
@@ -227,7 +241,7 @@ typedef struct lua_TValue TValue;
     val_(io).gc = i_g; settt_(io, ctb(i_g->tt)); }
 
 /**
- * 将obj指向的对象Value 的union元素设为 (GCObjec *) 类型，并指向x指向的对象;
+ * 将obj指向的对象 Value 的union元素设为 (GCObjec *) 类型，并指向x指向的对象;
  * tag设为 x 指向的对象tag，并添加可回收属性
  */
 #define setsvalue(L,obj,x) \
@@ -244,6 +258,9 @@ typedef struct lua_TValue TValue;
     val_(io).gc = obj2gco(x_); settt_(io, ctb(LUA_TUSERDATA)); \
     checkliveness(G(L),io); }
 
+/**
+ * x 为 lua_State * 类型
+ */
 #define setthvalue(L,obj,x) \
   { TValue *io = (obj); lua_State *x_ = (x); \
     val_(io).gc = obj2gco(x_); settt_(io, ctb(LUA_TTHREAD)); \
@@ -254,6 +271,9 @@ typedef struct lua_TValue TValue;
     val_(io).gc = obj2gco(x_); settt_(io, ctb(LUA_TLCL)); \
     checkliveness(G(L),io); }
 
+/**
+ * x 为 闭包类型, obj 标记为 可回收
+ */
 #define setclCvalue(L,obj,x) \
   { TValue *io = (obj); CClosure *x_ = (x); \
     val_(io).gc = obj2gco(x_); settt_(io, ctb(LUA_TCCL)); \
@@ -348,6 +368,7 @@ typedef TValue *StkId;  /* index to stack elements */
  */
 typedef struct TString {
   CommonHeader;
+  /* long strings 是否计算了 hash 值 */
   lu_byte extra;  /* reserved words for short strings; "has hash" for longs */
   /* hash code of string */
   unsigned int hash;
@@ -445,6 +466,9 @@ typedef union UUdata {
 	  checkliveness(G(L),io); }
 
 
+/**
+ * u 为 Udata 指针，将其对象值赋给 o 所指对象
+ */
 #define getuservalue(L,u,o) \
 	{ TValue *io=(o); const Udata *iu = (u); \
 	  io->value_ = iu->user_; io->tt_ = iu->ttuv_; \
@@ -542,12 +566,20 @@ typedef union Closure {
 /*
 ** Tables
 */
-
+/**
+ * key 可以是任意类型，不一定是 string
+ */
 typedef union TKey {
   struct {
     TValuefields;
+	/** 
+	 * 因为 node 数组是个 hash 表，解决冲突办法是链表，但这个链表直接是在
+	 * 原 node 数组里面，通过偏移值来链接, next 就是这个偏移值，而不是下一
+	 * 个元素的下标, 为0表示链表结束
+	 */
     int next;  /* for chaining (offset for next node) */
   } nk;
+  /* key 的值 */
   TValue tvk;
 } TKey;
 
@@ -568,9 +600,12 @@ typedef struct Node {
 typedef struct Table {
   CommonHeader;
   lu_byte flags;  /* 1<<p means tagmethod(p) is not present */
+  /* node array 的大小总是是 2 的整数次方 */
   lu_byte lsizenode;  /* log2 of size of 'node' array */
   unsigned int sizearray;  /* size of 'array' array */
+  /* 存放表的以整数为下标的值 */
   TValue *array;  /* array part */
+  /* 存放表的属性，即 key 为字符串类型 */
   Node *node;
   Node *lastfree;  /* any free position is before this position */
   struct Table *metatable;
@@ -582,11 +617,13 @@ typedef struct Table {
 /*
 ** 'module' operation for hashing (size is always a power of 2)
 */
+/* s % size */
 #define lmod(s,size) \
 	(check_exp((size&(size-1))==0, (cast(int, (s) & ((size)-1)))))
 
 
 #define twoto(x)	(1<<(x))
+/* t 为表，返回 Table 的 node 数组大小 */
 #define sizenode(t)	(twoto((t)->lsizenode))
 
 
@@ -614,13 +651,30 @@ LUAI_DDEC const TValue luaO_nilobject_;
 LUAI_FUNC int luaO_int2fb (unsigned int x);
 LUAI_FUNC int luaO_fb2int (int x);
 LUAI_FUNC int luaO_utf8esc (char *buff, unsigned long x);
+ /* ceil( log2(x) ) */
 LUAI_FUNC int luaO_ceillog2 (unsigned int x);
+/**
+ * 各种运算符实现, 类型不同的时候会尝试将类型都转为浮点数再进行运算, 若类型
+ * 没有基本运算符，则会尝试使用 metamethod;
+ * op: 运算符类型
+ * p1: 第一个操作数
+ * p2: 第二个操作数
+ * res: 结果
+ */
 LUAI_FUNC void luaO_arith (lua_State *L, int op, const TValue *p1,
                            const TValue *p2, TValue *res);
+/**
+ * 字符串转 为 number 类型, 先尝试转为 lua_Integer 类型，
+ * 失败后尝试转为lua_Number类型,
+ * 
+ * 成功则返回字符串长度，失败返回0
+ */
 LUAI_FUNC size_t luaO_str2num (const char *s, TValue *o);
 LUAI_FUNC int luaO_hexavalue (int c);
 /* 将 number 对象转成字符串, 如 5， 5.0， 5e9 */
 LUAI_FUNC void luaO_tostring (lua_State *L, StkId obj);
+/* this function handles only '%d', '%c', '%f', '%p', and '%s' 
+   conventional formats, plus Lua-specific '%I' and '%U' */
 LUAI_FUNC const char *luaO_pushvfstring (lua_State *L, const char *fmt,
                                                        va_list argp);
 LUAI_FUNC const char *luaO_pushfstring (lua_State *L, const char *fmt, ...);

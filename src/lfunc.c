@@ -22,6 +22,9 @@
 
 
 
+/**
+ * 新建一个有 n 个 upvalues 的闭包
+ */
 CClosure *luaF_newCclosure (lua_State *L, int n) {
   GCObject *o = luaC_newobj(L, LUA_TCCL, sizeCclosure(n));
   CClosure *c = gco2ccl(o);

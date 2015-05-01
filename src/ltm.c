@@ -67,6 +67,12 @@ const TValue *luaT_gettm (Table *events, TMS event, TString *ename) {
 }
 
 
+/**
+ * 获取对象的元方法
+ * 
+ * o: 对象
+ * event: 元方法类型
+ */
 const TValue *luaT_gettmbyobj (lua_State *L, const TValue *o, TMS event) {
   Table *mt;
   switch (ttnov(o)) {
@@ -83,6 +89,15 @@ const TValue *luaT_gettmbyobj (lua_State *L, const TValue *o, TMS event) {
 }
 
 
+/**
+ * 元方法计算
+ *
+ * f: 元方法
+ * p1: 第一个参数
+ * p2: 第二个参数
+ * p3: hasres 为 ture 时表示返回值，否则表示第三个参数
+ * hasres: 是否有返回值
+ */
 void luaT_callTM (lua_State *L, const TValue *f, const TValue *p1,
                   const TValue *p2, TValue *p3, int hasres) {
   ptrdiff_t result = savestack(L, p3);
@@ -100,6 +115,12 @@ void luaT_callTM (lua_State *L, const TValue *f, const TValue *p1,
 }
 
 
+/**
+ * 先尝试 p1 有无元表，若无再尝试 p2 有无元表，用最先找到的元表的元方法进行计算 
+ * 
+ * res: 返回值
+ * event: 运算类型
+ */
 int luaT_callbinTM (lua_State *L, const TValue *p1, const TValue *p2,
                     StkId res, TMS event) {
   const TValue *tm = luaT_gettmbyobj(L, p1, event);  /* try first operand */
@@ -110,7 +131,10 @@ int luaT_callbinTM (lua_State *L, const TValue *p1, const TValue *p2,
   return 1;
 }
 
-
+/**
+ * 在 luaO_arith (lobject.c) 函数被调用，当两个值不能进行普通运算时，
+ * 检测其元表中是否定义了相关的方法. 若还是无法运算，则报相应的错误.
+ */
 void luaT_trybinTM (lua_State *L, const TValue *p1, const TValue *p2,
                     StkId res, TMS event) {
   if (!luaT_callbinTM(L, p1, p2, res, event)) {

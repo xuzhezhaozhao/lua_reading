@@ -33,6 +33,11 @@ LUAI_FUNC l_noret luaG_tointerror (lua_State *L, const TValue *p1,
 LUAI_FUNC l_noret luaG_ordererror (lua_State *L, const TValue *p1,
                                                  const TValue *p2);
 LUAI_FUNC l_noret luaG_runerror (lua_State *L, const char *fmt, ...);
+/*
+ * Generates a Lua error, using the value at the top of the stack
+ * as the error object. This function does a long jump, and therefore
+ * never returns (see luaL_error).
+ */
 LUAI_FUNC l_noret luaG_errormsg (lua_State *L);
 LUAI_FUNC void luaG_traceexec (lua_State *L);
 

@@ -54,7 +54,9 @@ int luaO_fb2int (int x) {
   else return ((x & 7) + 8) << (e - 1);
 }
 
-
+/*
+ * ceil( log2(x) )
+ */
 int luaO_ceillog2 (unsigned int x) {
   static const lu_byte log_2[256] = {
     0,1,2,2,3,3,3,3,4,4,4,4,4,4,4,4,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,
@@ -73,6 +75,9 @@ int luaO_ceillog2 (unsigned int x) {
 }
 
 
+/**
+ * 操作数为 lua_Integer 的运算实现
+ */
 static lua_Integer intarith (lua_State *L, int op, lua_Integer v1,
                                                    lua_Integer v2) {
   switch (op) {
@@ -93,6 +98,9 @@ static lua_Integer intarith (lua_State *L, int op, lua_Integer v1,
 }
 
 
+/**
+ * 浮点数运算符实现
+ */
 static lua_Number numarith (lua_State *L, int op, lua_Number v1,
                                                   lua_Number v2) {
   switch (op) {
@@ -113,6 +121,14 @@ static lua_Number numarith (lua_State *L, int op, lua_Number v1,
 }
 
 
+/**
+ * 各种运算符实现, 类型不同的时候会尝试将类型都转为浮点数再进行运算, 若类型
+ * 没有基本运算符，则会尝试使用 metamethod;
+ * op: 运算符类型
+ * p1: 第一个操作数
+ * p2: 第二个操作数
+ * res: 结果
+ */
 void luaO_arith (lua_State *L, int op, const TValue *p1, const TValue *p2,
                  TValue *res) {
   switch (op) {
@@ -336,6 +352,7 @@ int luaO_utf8esc (char *buff, unsigned long x) {
 /*
 ** Convert a number object to a string
 */
+/* 结果还是存放在原位置 */
 void luaO_tostring (lua_State *L, StkId obj) {
   char buff[MAXNUMBER2STR];
   size_t len;

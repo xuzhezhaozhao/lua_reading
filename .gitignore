@@ -1,2 +1,6 @@
 *.o
 *.swp
+*.a
+src/lua
+src/luac
+src/tags
