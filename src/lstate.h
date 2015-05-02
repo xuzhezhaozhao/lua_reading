@@ -214,8 +214,7 @@ union GCUnion {
 
 /* macro to convert a Lua object into a GCObject */
 /*
- * 实际就是返回指向每个可回收对象头部都有的 CommonHeader里的 GCobject 那个东西
- * 的指针
+ * 返回指向 GCObject 的指针
  */
 #define obj2gco(v) \
 	check_exp(novariant((v)->tt) < LUA_TDEADKEY, (&(cast_u(v)->gc)))

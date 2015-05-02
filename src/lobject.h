@@ -176,6 +176,7 @@ typedef struct lua_TValue TValue;
 /* o转为指向Udata的指针 */
 #define uvalue(o)	check_exp(ttisfulluserdata(o), gco2u(val_(o).gc))
 #define clvalue(o)	check_exp(ttisclosure(o), gco2cl(val_(o).gc))
+/* lua closure */
 #define clLvalue(o)	check_exp(ttisLclosure(o), gco2lcl(val_(o).gc))
 /* o转为指向 Closure 的指针 */
 #define clCvalue(o)	check_exp(ttisCclosure(o), gco2ccl(val_(o).gc))
@@ -284,6 +285,7 @@ typedef struct lua_TValue TValue;
     val_(io).gc = obj2gco(x_); settt_(io, ctb(LUA_TTABLE)); \
     checkliveness(G(L),io); }
 
+/* 设置obj类型为 deadkey */
 #define setdeadvalue(obj)	settt_(obj, LUA_TDEADKEY)
 
 
@@ -560,6 +562,7 @@ typedef union Closure {
 /* o 对象是否是 lua 函数，闭包 */
 #define isLfunction(o)	ttisLclosure(o)
 
+/* lua 闭包的 Proto */
 #define getproto(o)	(clLvalue(o)->p)
 
 
@@ -571,6 +574,7 @@ typedef union Closure {
  */
 typedef union TKey {
   struct {
+    /* TODO */
     TValuefields;
 	/** 
 	 * 因为 node 数组是个 hash 表，解决冲突办法是链表，但这个链表直接是在
@@ -603,9 +607,9 @@ typedef struct Table {
   /* node array 的大小总是是 2 的整数次方 */
   lu_byte lsizenode;  /* log2 of size of 'node' array */
   unsigned int sizearray;  /* size of 'array' array */
-  /* 存放表的以整数为下标的值 */
+  /* sequence array */
   TValue *array;  /* array part */
-  /* 存放表的属性，即 key 为字符串类型 */
+  /* node hash table */
   Node *node;
   Node *lastfree;  /* any free position is before this position */
   struct Table *metatable;
