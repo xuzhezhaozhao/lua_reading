@@ -42,12 +42,20 @@
     cast(char *, luaM_realloc_(L, (b), (on)*sizeof(char), (n)*sizeof(char)))
 
 #define luaM_freemem(L, b, s)	luaM_realloc_(L, (b), (s), 0)
+/* 
+ * 释放对象b所占内存
+ * b: 地址
+ */
 #define luaM_free(L, b)		luaM_realloc_(L, (b), sizeof(*(b)), 0)
+/* 
+ * b: 地址块地址; 
+ * n: 元素个数 
+ */ 
 #define luaM_freearray(L, b, n)   luaM_realloc_(L, (b), (n)*sizeof(*(b)), 0)
 
 #define luaM_malloc(L,s)	luaM_realloc_(L, NULL, 0, (s))
 #define luaM_new(L,t)		cast(t *, luaM_malloc(L, sizeof(t)))
-/* 分配容器，包含 n 个 t 类型的元素 */
+/* 新建一个容器，包含 n 个 t 类型的元素 */
 #define luaM_newvector(L,n,t) \
 		cast(t *, luaM_reallocv(L, NULL, 0, n, sizeof(t)))
 

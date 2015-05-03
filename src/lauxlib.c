@@ -220,6 +220,15 @@ LUALIB_API int luaL_error (lua_State *L, const char *fmt, ...) {
 }
 
 
+/**
+ * os 库中相关函数会用到它
+ *
+ * 根据 返回值 stat 判断系统命令是否出错，出错则将出错信息压入栈中, 
+ * fname 不为 NULL 则将其加入到出错信息中.
+ * 
+ * stat: os 库调用地系统命令执行是否成功
+ * fname: 文件名, 或为 NULL
+ */
 LUALIB_API int luaL_fileresult (lua_State *L, int stat, const char *fname) {
   int en = errno;  /* calls to Lua API may change this value */
   if (stat) {
@@ -247,6 +256,10 @@ LUALIB_API int luaL_fileresult (lua_State *L, int stat, const char *fname) {
 /*
 ** use appropriate macros to interpret 'pclose' return status
 */
+/**
+ * 判断 system() 返回值为 stat 时是正常退出还是接受到了signal, 
+ * what 指向 'exit' 或 'signal' 字符串.
+ */
 #define l_inspectstat(stat,what)  \
    if (WIFEXITED(stat)) { stat = WEXITSTATUS(stat); } \
    else if (WIFSIGNALED(stat)) { stat = WTERMSIG(stat); what = "signal"; }
@@ -260,8 +273,18 @@ LUALIB_API int luaL_fileresult (lua_State *L, int stat, const char *fname) {
 #endif				/* } */
 
 
+/**
+ * os.excute 调用, 检查 system() 调用的返回值, 并将信息压入栈中,
+ * 命令成功栈中有三个元素 true, 'exit', code, 失败为 nil, 'exit', code, 
+ * 'exit' 也有可能是 'signal', 表示被信号中断
+ * 
+ * stat 为 system() 调用的返回值
+ * 
+ * 返回值: os.excute 返回值个数
+ */
 LUALIB_API int luaL_execresult (lua_State *L, int stat) {
   const char *what = "exit";  /* type of termination */
+  /* io lib 里面 pclose 不是所有系统都支持，不支持的的 stat 就为 -1 */
   if (stat == -1)  /* error? */
     return luaL_fileresult(L, 0, NULL);
   else {
@@ -285,6 +308,10 @@ LUALIB_API int luaL_execresult (lua_State *L, int stat) {
 ** =======================================================
 */
 
+/**
+ * registry.tname = metatable 
+ * 新建的元表放在栈顶
+ */
 LUALIB_API int luaL_newmetatable (lua_State *L, const char *tname) {
   if (luaL_getmetatable(L, tname))  /* name already in use? */
     return 0;  /* leave previous value on top, but return 0 */
@@ -298,12 +325,22 @@ LUALIB_API int luaL_newmetatable (lua_State *L, const char *tname) {
 }
 
 
+/**
+ * 设置栈顶元素元表为索引 LUA_REGISTRYINDEX 位置注册表 tname 属性的表 
+ */
 LUALIB_API void luaL_setmetatable (lua_State *L, const char *tname) {
   luaL_getmetatable(L, tname);
   lua_setmetatable(L, -2);
 }
 
 
+/**
+ * 判断 stack[ud] 是否为Udata(full or light)类型，且其元表是否与 
+ * LUA_REGISTRYINDEX 位置表的 tname 属性的表相同, 不是或不同返回
+ * NULL, 否则返回 Udata 数据区域指针.
+ * 
+ * io.type 中 tnmae 为 "FILE*"
+ */
 LUALIB_API void *luaL_testudata (lua_State *L, int ud, const char *tname) {
   void *p = lua_touserdata(L, ud);
   if (p != NULL) {  /* value is a userdata? */
@@ -319,6 +356,10 @@ LUALIB_API void *luaL_testudata (lua_State *L, int ud, const char *tname) {
 }
 
 
+/**
+ * 同上，不同的是若返回值为NULL会报错, 所以返回的一定是合法值
+ * tname 为 LUA_FILEHANDLE 时则是检查 stack[ud] 是否是 LStream
+ */
 LUALIB_API void *luaL_checkudata (lua_State *L, int ud, const char *tname) {
   void *p = luaL_testudata(L, ud, tname);
   if (p == NULL) typeerror(L, ud, tname);
@@ -334,6 +375,10 @@ LUALIB_API void *luaL_checkudata (lua_State *L, int ud, const char *tname) {
 ** =======================================================
 */
 
+/**
+ * 检查参数是否在lst中，若在返回其位置;
+ * 参数 为 stack[arg], 若def非空，则为可选参数，默认为def
+ */
 LUALIB_API int luaL_checkoption (lua_State *L, int arg, const char *def,
                                  const char *const lst[]) {
   const char *name = (def) ? luaL_optstring(L, arg, def) :
@@ -467,7 +512,6 @@ LUALIB_API lua_Integer luaL_optinteger (lua_State *L, int arg,
 ** check whether buffer is using a userdata on the stack as a temporary
 ** buffer
 */
-/* 是返回false，不是返回true */
 #define buffonstack(B)	((B)->b != (B)->initb)
 
 
@@ -914,6 +958,11 @@ LUALIB_API void luaL_openlib (lua_State *L, const char *libname,
 ** function gets the 'nup' elements at the top as upvalues.
 ** Returns with only the table at the stack.
 */
+/**
+ * os, math, string lib 都是用这个函数设置的，nup = 0
+ * 
+ * nup: 函数 upvalue 个数
+ */
 LUALIB_API void luaL_setfuncs (lua_State *L, const luaL_Reg *l, int nup) {
   luaL_checkstack(L, nup, "too many upvalues");
   for (; l->name != NULL; l++) {  /* fill the table with given functions */

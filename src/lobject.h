@@ -219,7 +219,7 @@ typedef struct lua_TValue TValue;
 #define setivalue(obj,x) \
   { TValue *io=(obj); val_(io).i=(x); settt_(io, LUA_TNUMINT); }
 
-/* 将 obj 对象设为nil */
+/* 将 obj 对象类型设为nil */
 #define setnilvalue(obj) settt_(obj, LUA_TNIL)
 
 /**
@@ -589,6 +589,10 @@ typedef union TKey {
 
 
 /* copy a value into a key without messing up field 'next' */
+/**
+ * key: 为 Tkey* 类型
+ * obj: 为 TValue* 类型
+ */
 #define setnodekey(L,key,obj) \
 	{ TKey *k_=(key); const TValue *io_=(obj); \
 	  k_->nk.value_ = io_->value_; k_->nk.tt_ = io_->tt_; \
@@ -603,6 +607,7 @@ typedef struct Node {
 
 typedef struct Table {
   CommonHeader;
+  /* 初始时这个值为 cast_byte(~0) */
   lu_byte flags;  /* 1<<p means tagmethod(p) is not present */
   /* node array 的大小总是是 2 的整数次方 */
   lu_byte lsizenode;  /* log2 of size of 'node' array */

@@ -75,11 +75,15 @@ l_noret luaM_toobig (lua_State *L) {
 ** generic allocation routine.
 */
 /**
+ * 调用此函数前，参数都经过检查, 保证了分配的内存块不会过大;
+ * 
  * 创建对象的函数 luaM_newobject 也调用此函数(lmem.h):
  *  #define luaM_newobject(L,tag,s)	luaM_realloc_(L, NULL, tag, (s))
  *  
  *  nsize 为 0 表示释放内存
- #  #define luaM_freearray(L, b, n)   luaM_realloc_(L, (b), (n)*sizeof(*(b)), 0)
+ *  #define luaM_freearray(L, b, n) luaM_realloc_(L, (b), (n)*sizeof(*(b)), 0)
+ *  
+ *  内部调用 g->frealloc 来重新分配内存
  */
 void *luaM_realloc_ (lua_State *L, void *block, size_t osize, size_t nsize) {
   void *newblock;

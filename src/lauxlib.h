@@ -90,20 +90,50 @@ LUALIB_API void (luaL_checkstack) (lua_State *L, int sz, const char *msg);
  * t   : 类型
  */
 LUALIB_API void (luaL_checktype) (lua_State *L, int arg, int t);
+/**
+ * 栈位置arg是否有值
+ */
 LUALIB_API void (luaL_checkany) (lua_State *L, int arg);
 
+/**
+ * registry.tname = metatable 
+ * 新建的元表放在栈顶
+ */
 LUALIB_API int   (luaL_newmetatable) (lua_State *L, const char *tname);
+/**
+ * 设置栈顶元素元表为索引 LUA_REGISTRYINDEX 位置注册表 tname 属性的表 
+ */
 LUALIB_API void  (luaL_setmetatable) (lua_State *L, const char *tname);
+/**
+ * 判断 stack[ud] 是否为Udata(full or light)类型，且其元表是否与 
+ * LUA_REGISTRYINDEX 位置表的 tname 属性的表相同, 不是或不同返回
+ * NULL, 否则返回 Udata 数据区域指针.
+ * 
+ * io.type 中 tnmae 为 "FILE*"
+ */
 LUALIB_API void *(luaL_testudata) (lua_State *L, int ud, const char *tname);
 LUALIB_API void *(luaL_checkudata) (lua_State *L, int ud, const char *tname);
 
 LUALIB_API void (luaL_where) (lua_State *L, int lvl);
 LUALIB_API int (luaL_error) (lua_State *L, const char *fmt, ...);
 
+/**
+ * 检查参数是否在lst中，若在返回其位置;
+ * 参数 为 stack[arg], 若def非空，则为可选参数，默认为def
+ */
 LUALIB_API int (luaL_checkoption) (lua_State *L, int arg, const char *def,
                                    const char *const lst[]);
 
 LUALIB_API int (luaL_fileresult) (lua_State *L, int stat, const char *fname);
+/**
+ * os.excute 调用, 检查 system() 调用的返回值, 并将信息压入栈中,
+ * 命令成功栈中有三个元素 true, 'exit', code, 失败为 nil, 'exit', code, 
+ * 'exit' 也有可能是 'signal', 表示被信号中断
+ * 
+ * stat 为 system() 调用的返回值
+ * 
+ * 返回值: os.excute 返回值个数
+ */
 LUALIB_API int (luaL_execresult) (lua_State *L, int stat);
 
 /* pre-defined references */
@@ -146,6 +176,7 @@ LUALIB_API void (luaL_requiref) (lua_State *L, const char *modname,
 */
 
 
+/* 在栈顶新建一个表, 大小为 lib 中元素个数 */
 #define luaL_newlibtable(L,l)	\
   lua_createtable(L, 0, sizeof(l)/sizeof((l)[0]) - 1)
 
@@ -161,7 +192,14 @@ LUALIB_API void (luaL_requiref) (lua_State *L, const char *modname,
  */
 #define luaL_argcheck(L, cond,arg,extramsg)	\
 		((void)((cond) || luaL_argerror(L, (arg), (extramsg))))
+/* 获取 stack[n] 元素转为字符串 */
 #define luaL_checkstring(L,n)	(luaL_checklstring(L, (n), NULL))
+
+/**
+ * 实现可选字符串参数;
+ * n: index
+ * d: 默认值
+ */
 #define luaL_optstring(L,n,d)	(luaL_optlstring(L, (n), (d), NULL))
 
 #define luaL_typename(L,i)	lua_typename(L, lua_type(L,(i)))
@@ -172,6 +210,10 @@ LUALIB_API void (luaL_requiref) (lua_State *L, const char *modname,
 #define luaL_dostring(L, s) \
 	(luaL_loadstring(L, s) || lua_pcall(L, 0, LUA_MULTRET, 0))
 
+/**
+ * 获得 索引 LUA_REGISTRYINDEX 位置注册表 n 属性的表, 其作为元表,
+ * 将其放在栈顶
+ */
 #define luaL_getmetatable(L,n)	(lua_getfield(L, LUA_REGISTRYINDEX, (n)))
 
 /**
@@ -214,8 +256,8 @@ LUALIB_API void (luaL_buffinit) (lua_State *L, luaL_Buffer *B);
 ** returns a pointer to a free area with at least 'sz' bytes
 */
 /*
- * 原buffer空间不够的话会重新分配一片Udata的数据区域给buffer
- * 返回的是buffer内的有效地址的首地址
+ * 请求 sz 大小的空余空间，原buffer空间不够的话会重新分配一片Udata的数
+ * 据区域给buffer, 返回的是buffer内的有效地址的首地址
  */
 LUALIB_API char *(luaL_prepbuffsize) (luaL_Buffer *B, size_t sz);
 /**
@@ -245,6 +287,7 @@ LUALIB_API void (luaL_pushresultsize) (luaL_Buffer *B, size_t sz);
   */
 LUALIB_API char *(luaL_buffinitsize) (lua_State *L, luaL_Buffer *B, size_t sz);
 
+/* 返回 buf 首个有效地址 */
 #define luaL_prepbuffer(B)	luaL_prepbuffsize(B, LUAL_BUFFERSIZE)
 
 /* }====================================================== */
@@ -266,6 +309,7 @@ LUALIB_API char *(luaL_buffinitsize) (lua_State *L, luaL_Buffer *B, size_t sz);
 #define LUA_FILEHANDLE          "FILE*"
 
 
+/* io lib 中使用 */
 typedef struct luaL_Stream {
   FILE *f;  /* stream (NULL for incompletely created streams) */
   lua_CFunction closef;  /* to close stream (NULL for closed streams) */

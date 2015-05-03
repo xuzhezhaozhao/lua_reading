@@ -171,6 +171,7 @@ LUA_API int   (lua_gettop) (lua_State *L);
  * idx < 0 时, L->top += idx + 1
  */
 LUA_API void  (lua_settop) (lua_State *L, int idx);
+/* 将栈位置 idx 的对象复制到栈顶 */
 LUA_API void  (lua_pushvalue) (lua_State *L, int idx);
 LUA_API void  (lua_rotate) (lua_State *L, int idx, int n);
 LUA_API void  (lua_copy) (lua_State *L, int fromidx, int toidx);
@@ -216,6 +217,10 @@ LUA_API int             (lua_toboolean) (lua_State *L, int idx);
 LUA_API const char     *(lua_tolstring) (lua_State *L, int idx, size_t *len);
 LUA_API size_t          (lua_rawlen) (lua_State *L, int idx);
 LUA_API lua_CFunction   (lua_tocfunction) (lua_State *L, int idx);
+/**
+ * 获取 Udata 或 light userdata (就是一个指针) 的数据区域首地址
+ * 若元素不是 Udata 类型返回 NULL
+ */
 LUA_API void	       *(lua_touserdata) (lua_State *L, int idx);
 LUA_API lua_State      *(lua_tothread) (lua_State *L, int idx);
 LUA_API const void     *(lua_topointer) (lua_State *L, int idx);
@@ -246,6 +251,15 @@ LUA_API void  (lua_arith) (lua_State *L, int op);
 #define LUA_OPEQ	0
 #define LUA_OPLT	1
 #define LUA_OPLE	2
+/*
+ * Returns 1 if the two values in indices index1 and index2 
+ * are primitively equal (that is, without calling metamethods).
+ * Otherwise returns 0. Also returns 0 if any of the indices are
+ * not valid.
+ */
+/**
+ * index1, index2 位置的两个对象是否相等, 不调用元方法
+ */
 
 LUA_API int   (lua_rawequal) (lua_State *L, int idx1, int idx2);
 /**
@@ -280,6 +294,13 @@ LUA_API int   (lua_pushthread) (lua_State *L);
 */
 LUA_API int (lua_getglobal) (lua_State *L, const char *name);
 LUA_API int (lua_gettable) (lua_State *L, int idx);
+/*
+ * Pushes onto the stack the value t[k], where t is the value at the
+ * given index. As in Lua, this function may trigger a metamethod for
+ * the "index" event (see §2.4).
+
+ * Returns the type of the pushed value.
+ */
 LUA_API int (lua_getfield) (lua_State *L, int idx, const char *k);
 LUA_API int (lua_geti) (lua_State *L, int idx, lua_Integer n);
 LUA_API int (lua_rawget) (lua_State *L, int idx);
@@ -291,6 +312,14 @@ LUA_API void  (lua_createtable) (lua_State *L, int narr, int nrec);
  * 分配一个大小为 size 的Udata型数据在栈顶，并返回Udata数据区域的指针
  */
 LUA_API void *(lua_newuserdata) (lua_State *L, size_t sz);
+/*
+ * If the value at the given index has a metatable, the function pushes
+ * that metatable onto the stack and returns 1. Otherwise, the function
+ * returns 0 and pushes nothing on the stack.
+ */
+/**
+ * 获取对象元表, 放在栈顶, 成功返回1，否则0
+ */
 LUA_API int   (lua_getmetatable) (lua_State *L, int objindex);
 LUA_API int  (lua_getuservalue) (lua_State *L, int idx);
 
@@ -308,6 +337,13 @@ LUA_API void  (lua_seti) (lua_State *L, int idx, lua_Integer n);
 LUA_API void  (lua_rawset) (lua_State *L, int idx);
 LUA_API void  (lua_rawseti) (lua_State *L, int idx, lua_Integer n);
 LUA_API void  (lua_rawsetp) (lua_State *L, int idx, const void *p);
+/*
+ * Pops a table from the stack and sets it as the new metatable for 
+ * the value at the given index.
+ */
+/**
+ * 若 objindex 元素不是表，则会设置该元素类型的全局默认元表
+ */
 LUA_API int   (lua_setmetatable) (lua_State *L, int objindex);
 LUA_API void  (lua_setuservalue) (lua_State *L, int idx);
 
@@ -390,6 +426,9 @@ LUA_API void      (lua_setallocf) (lua_State *L, lua_Alloc f, void *ud);
 #define lua_tonumber(L,i)	lua_tonumberx(L,(i),NULL)
 #define lua_tointeger(L,i)	lua_tointegerx(L,(i),NULL)
 
+/**
+ * n: pop 元素个数
+ */
 #define lua_pop(L,n)		lua_settop(L, -(n)-1)
 
 #define lua_newtable(L)		lua_createtable(L, 0, 0)
@@ -406,7 +445,7 @@ LUA_API void      (lua_setallocf) (lua_State *L, lua_Alloc f, void *ud);
 #define lua_isthread(L,n)	(lua_type(L, (n)) == LUA_TTHREAD)
 #define lua_isnone(L,n)		(lua_type(L, (n)) == LUA_TNONE)
 /**
- * 判断lua的类型是否是LUA_TNONE或LUA_TNIL
+ * 判断stack[n]元素的类型是否是LUA_TNONE或LUA_TNIL
  */
 #define lua_isnoneornil(L, n)	(lua_type(L, (n)) <= 0)
 
@@ -424,8 +463,10 @@ LUA_API void      (lua_setallocf) (lua_State *L, lua_Alloc f, void *ud);
 
 #define lua_insert(L,idx)	lua_rotate(L, (idx), 1)
 
+/* 删除位置 idx 的元素 */
 #define lua_remove(L,idx)	(lua_rotate(L, (idx), -1), lua_pop(L, 1))
 
+/* 将栈顶元素复制到 stack[idx], 并弹出栈顶元素 */
 #define lua_replace(L,idx)	(lua_copy(L, -1, (idx)), lua_pop(L, 1))
 
 /* }============================================================== */

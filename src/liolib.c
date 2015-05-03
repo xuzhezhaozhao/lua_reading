@@ -135,11 +135,20 @@
 typedef luaL_Stream LStream;
 
 
+/**
+ * 将栈顶元素转为 LSTream * 类型, 不能转则报错
+ */
 #define tolstream(L)	((LStream *)luaL_checkudata(L, 1, LUA_FILEHANDLE))
 
+/* p 为 LStream* 类型, 判断该 stream 是否关闭了 */
 #define isclosed(p)	((p)->closef == NULL)
 
 
+/*
+ * Checks whether obj is a valid file handle. Returns the string
+ * "file" if obj is an open file handle, "closed file" if obj is
+ * a closed file handle, or nil if obj is not a file handle.
+ */
 static int io_type (lua_State *L) {
   LStream *p;
   luaL_checkany(L, 1);
@@ -154,6 +163,10 @@ static int io_type (lua_State *L) {
 }
 
 
+/**
+ * 将文件流(栈顶)转为字符串形式, 'file (closed)' 或 'file (0xxxxxx)',
+ * 栈顶元素不能转 LStream 则报错
+ */
 static int f_tostring (lua_State *L) {
   LStream *p = tolstream(L);
   if (isclosed(p))
@@ -164,6 +177,10 @@ static int f_tostring (lua_State *L) {
 }
 
 
+/**
+ * 栈顶元素 LStream 转 FILE *, LStream 已经关闭的话则报错, 栈顶
+ * 不能转 LStream 也报错
+ */
 static FILE *tofile (lua_State *L) {
   LStream *p = tolstream(L);
   if (isclosed(p))
@@ -181,6 +198,7 @@ static FILE *tofile (lua_State *L) {
 static LStream *newprefile (lua_State *L) {
   LStream *p = (LStream *)lua_newuserdata(L, sizeof(LStream));
   p->closef = NULL;  /* mark file handle as 'closed' */
+  /* 设置栈顶元素元表 */
   luaL_setmetatable(L, LUA_FILEHANDLE);
   return p;
 }
@@ -191,6 +209,7 @@ static LStream *newprefile (lua_State *L) {
 ** a bug in some versions of the Clang compiler (e.g., clang 3.0 for
 ** 32 bits).
 */
+/* 操作数为栈顶元素 */
 static int aux_close (lua_State *L) {
   LStream *p = tolstream(L);
   volatile lua_CFunction cf = p->closef;
@@ -207,6 +226,9 @@ static int io_close (lua_State *L) {
 }
 
 
+/**
+ *  栈顶元素未关闭则关闭它
+ */
 static int f_gc (lua_State *L) {
   LStream *p = tolstream(L);
   if (!isclosed(p) && p->f != NULL)
@@ -218,6 +240,10 @@ static int f_gc (lua_State *L) {
 /*
 ** function to close regular files
 */
+/** 
+ * LStream 结构中的关闭函数, 调用 fclose, 操作数为栈顶元素,
+ * 关闭失败报错
+ */
 static int io_fclose (lua_State *L) {
   LStream *p = tolstream(L);
   int res = fclose(p->f);
@@ -225,6 +251,10 @@ static int io_fclose (lua_State *L) {
 }
 
 
+/**
+ * 新建文件, 设置 LStream 的文件流指针和关闭函数,
+ * 返回新建的 LStream 指针
+ */
 static LStream *newfile (lua_State *L) {
   LStream *p = newprefile(L);
   p->f = NULL;
@@ -233,6 +263,13 @@ static LStream *newfile (lua_State *L) {
 }
 
 
+/**
+ * 调用 fopen 打开文件, 打开失败则报错
+ * fname: 文件名
+ * mode: 模式
+ * 
+ * LStream 结构保存在栈顶
+ */
 static void opencheck (lua_State *L, const char *fname, const char *mode) {
   LStream *p = newfile(L);
   p->f = fopen(fname, mode);
@@ -260,7 +297,15 @@ static int io_pclose (lua_State *L) {
   return luaL_execresult(L, l_pclose(L, p->f));
 }
 
-
+/*
+ * This function is system dependent and is not available on all 
+ * platforms.
+ *
+ * Starts program prog in a separated process and returns a file
+ * handle that you can use to read data from this program (if mode
+ * is "r", the default) or to write data to this program (if mode
+ * is "w").
+ */
 static int io_popen (lua_State *L) {
   const char *filename = luaL_checkstring(L, 1);
   const char *mode = luaL_optstring(L, 2, "r");
@@ -270,7 +315,11 @@ static int io_popen (lua_State *L) {
   return (p->f == NULL) ? luaL_fileresult(L, 0, filename) : 1;
 }
 
-
+/*
+ * Returns a handle for a temporary file. This file is opened
+ * in update mode and it is automatically removed when the program
+ * ends. 
+ */
 static int io_tmpfile (lua_State *L) {
   LStream *p = newfile(L);
   p->f = tmpfile();
@@ -278,6 +327,9 @@ static int io_tmpfile (lua_State *L) {
 }
 
 
+/**
+ * 从注册表中找对应的文件指针
+ */
 static FILE *getiofile (lua_State *L, const char *findex) {
   LStream *p;
   lua_getfield(L, LUA_REGISTRYINDEX, findex);
@@ -288,15 +340,21 @@ static FILE *getiofile (lua_State *L, const char *findex) {
 }
 
 
+/**
+ * 看 下面 io_input 函数的注释
+ */
 static int g_iofile (lua_State *L, const char *f, const char *mode) {
   if (!lua_isnoneornil(L, 1)) {
+    /* 表示栈上有元素 */
     const char *filename = lua_tostring(L, 1);
     if (filename)
       opencheck(L, filename, mode);
     else {
       tofile(L);  /* check that it's a valid file handle */
+	  /* 将其推到栈顶 */
       lua_pushvalue(L, 1);
     }
+	/* 注册进注册表 registry */
     lua_setfield(L, LUA_REGISTRYINDEX, f);
   }
   /* return current value */
@@ -304,12 +362,23 @@ static int g_iofile (lua_State *L, const char *f, const char *mode) {
   return 1;
 }
 
-
+/*
+ * When called with a file name (栈上第一个元素), it opens the named file 
+ * (in text mode), and sets its handle as the default input file. 
+ * When called with a file handle, it simply sets this file handle
+ * as the default input file. When called without parameters, it 
+ * returns the current default input file (IO_INPUT).
+ *
+ * In case of errors this function raises the error, instead of 
+ * returning an error code.
+ */
 static int io_input (lua_State *L) {
   return g_iofile(L, IO_INPUT, "r");
 }
 
-
+/*
+ * Similar to io.input, but operates over the default output file.
+ */
 static int io_output (lua_State *L) {
   return g_iofile(L, IO_OUTPUT, "w");
 }
@@ -318,10 +387,15 @@ static int io_output (lua_State *L) {
 static int io_readline (lua_State *L);
 
 
+/**
+ * io_lines 调用, 压入一个 io_readline 函数的闭包, 闭包参数为 
+ * file handle, n, toclose, ...(n 个 read 参数)
+ */
 static void aux_lines (lua_State *L, int toclose) {
   int n = lua_gettop(L) - 1;  /* number of arguments to read */
   lua_pushinteger(L, n);  /* number of arguments to read */
   lua_pushboolean(L, toclose);  /* close/not close file when finished */
+  /* 将 n 个参数移上去 */
   lua_rotate(L, 2, 2);  /* move 'n' and 'toclose' to their positions */
   lua_pushcclosure(L, io_readline, 3 + n);
 }
@@ -334,6 +408,24 @@ static int f_lines (lua_State *L) {
 }
 
 
+/*
+ * Opens the given file name in read mode and returns an iterator 
+ * function that works like file:lines(···) over the opened file.
+ * When the iterator function detects the end of file, it returns 
+ * no values (to finish the loop) and automatically closes the file.
+ *
+ * The call io.lines() (with no file name) is equivalent to 
+ * io.input():lines("*l"); that is, it iterates over the lines of 
+ * the default input file. In this case it does not close the file 
+ * when the loop ends.
+ *
+ * In case of errors this function raises the error, instead of 
+ * returning an error code.
+ */
+/**
+ * 调用aux_lines, 压入一个 io_readline 函数的闭包, 闭包参数为 
+ * file handle, n, toclose, ...(n 个 read 参数)
+ */
 static int io_lines (lua_State *L) {
   int toclose;
   if (lua_isnone(L, 1)) lua_pushnil(L);  /* at least one argument */
@@ -462,6 +554,11 @@ static int test_eof (lua_State *L, FILE *f) {
 }
 
 
+/**
+ * chop: 是否不读入 '\n'
+ * 读入至少一个字符则返回 true，否则返回false
+ * 结果保存在栈顶
+ */
 static int read_line (lua_State *L, FILE *f, int chop) {
   luaL_Buffer b;
   int c = '\0';
@@ -483,6 +580,9 @@ static int read_line (lua_State *L, FILE *f, int chop) {
 }
 
 
+/**
+ * 读入文件全部内容, 结果存放在栈顶
+ */
 static void read_all (lua_State *L, FILE *f) {
   size_t nr;
   luaL_Buffer b;
@@ -496,6 +596,10 @@ static void read_all (lua_State *L, FILE *f) {
 }
 
 
+/**
+ * 读入n个字符，返回 true 如果读入了至少一个字符;
+ * 结果存放在栈顶
+ */
 static int read_chars (lua_State *L, FILE *f, size_t n) {
   size_t nr;  /* number of chars actually read */
   char *p;
@@ -508,11 +612,35 @@ static int read_chars (lua_State *L, FILE *f, size_t n) {
   return (nr > 0);  /* true iff read something */
 }
 
-
+/*
+ * Reads the file file, according to the given formats, which specify
+ * what to read. For each format, the function returns a string or a 
+ * number with the characters read, or nil if it cannot read data with
+ * the specified format. (In this latter case, the function does not 
+ * read subsequent formats.) When called without formats, it uses a 
+ * default format that reads the next line (see below).
+ * 
+ * The available formats are
+ *
+ * "n": reads a numeral and returns it as a float or an integer, following the lexical conventions of Lua. (The numeral may have leading spaces and a sign.) This format always reads the longest input sequence that is a valid prefix for a number; if that prefix does not form a valid number (e.g., an empty string, "0x", or "3.4e-"), it is discarded and the function returns nil.
+ * "i": reads an integral number and returns it as an integer.
+ * "a": reads the whole file, starting at the current position. On end of file, it returns the empty string.
+ * "l": reads the next line skipping the end of line, returning nil on end of file. This is the default format.
+ * "L": reads the next line keeping the end-of-line character (if present), returning nil on end of file.
+ * number: reads a string with up to this number of bytes, returning nil on end of file. If number is zero, it reads nothing and returns an empty string, or nil on end of file.
+ * 
+ * The formats "l" and "L" should be used only for text files
+ */
+/**
+ * first: 第一个格式参数的起始位置
+ * 结果都存放在栈顶，返回读取的格式串的数量
+ * 读取格式串失败时会立即返回，并将这个失败的串置为 nil 返回
+ */
 static int g_read (lua_State *L, FILE *f, int first) {
   int nargs = lua_gettop(L) - 1;
   int success;
   int n;
+/* Clear the error and EOF indicators for STREAM.  */
   clearerr(f);
   if (nargs == 0) {  /* no arguments? */
     success = read_line(L, f, 1);
@@ -599,7 +727,16 @@ static int io_readline (lua_State *L) {
 
 /* }====================================================== */
 
-
+/*
+ * Writes the value of each of its arguments to file. The arguments 
+ * must be strings or numbers.
+ *
+ * In case of success, this function returns file. Otherwise it returns 
+ * nil plus a string describing the error.
+ */
+/**
+ * arg: 类似 g_read 的 first 参数
+ */
 static int g_write (lua_State *L, FILE *f, int arg) {
   int nargs = lua_gettop(L) - arg;
   int status = 1;

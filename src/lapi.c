@@ -1113,7 +1113,7 @@ LUA_API void lua_createtable (lua_State *L, int narray, int nrec) {
  * returns 0 and pushes nothing on the stack.
  */
 /**
- * 获取对象元表, 放在栈顶
+ * 获取对象元表, 放在栈顶, 成功返回1，否则0
  */
 LUA_API int lua_getmetatable (lua_State *L, int objindex) {
   const TValue *obj;
@@ -1207,6 +1207,10 @@ LUA_API void lua_settable (lua_State *L, int idx) {
 
  * This function pops the value from the stack. As in Lua, this 
  * function may trigger a metamethod for the "newindex" event (see §2.4).
+ */
+/**
+ * t[k] = v, t 为 stack[idx], v 为栈顶元素
+ * 最后弹出 v, 可能使用元方法
  */
 LUA_API void lua_setfield (lua_State *L, int idx, const char *k) {
   StkId t;

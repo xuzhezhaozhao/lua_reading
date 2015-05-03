@@ -108,7 +108,24 @@
 #endif				/* } */
 
 
-
+/*
+ * This function is equivalent to the ISO C function system. It 
+ * passes command to be executed by an operating system shell. 
+ * Its first result is true if the command terminated successfully,
+ * or nil otherwise. After this first result the function returns 
+ * a string plus a number, as follows:
+ *
+ *   "exit": the command terminated normally; the following number
+ *      is the exit status of the command.
+ *   "signal": the command was terminated by a signal; the following 
+ *      number is the signal that terminated the command.
+ *      
+ * When called without a command, os.execute returns a boolean that 
+ * is true if a shell is available.
+ */
+/**
+ * 返回值是表示 栈顶返回值的数目
+ */
 static int os_execute (lua_State *L) {
   const char *cmd = luaL_optstring(L, 1, NULL);
   int stat = system(cmd);
@@ -120,20 +137,47 @@ static int os_execute (lua_State *L) {
   }
 }
 
-
+/*
+ * Deletes the file (or empty directory, on POSIX systems) with the given
+ * name. If this function fails, it returns nil, plus a string describing
+ * the error and the error code.
+*/
+/**
+ * 文件名字符串保存在栈顶
+ */
 static int os_remove (lua_State *L) {
   const char *filename = luaL_checkstring(L, 1);
   return luaL_fileresult(L, remove(filename) == 0, filename);
 }
 
-
+/*
+ * Renames file or directory named oldname to newname. If this 
+ * function fails, it returns nil, plus a string describing the
+ * error and the error code.
+*/
+/**
+ * 两个参数保存在栈顶
+ */
 static int os_rename (lua_State *L) {
   const char *fromname = luaL_checkstring(L, 1);
   const char *toname = luaL_checkstring(L, 2);
   return luaL_fileresult(L, rename(fromname, toname) == 0, NULL);
 }
 
-
+/*
+ * Returns a string with a file name that can be used for a temporary
+ * file. The file must be explicitly opened before its use and 
+ * explicitly removed when no longer needed.
+ *
+ * On POSIX systems, this function also creates a file with that 
+ * name, to avoid security risks. (Someone else might create the 
+ * file with wrong permissions in the time between getting the 
+ * name and creating the file.) You still have to open the file to
+ * use it and to remove it (even if you do not use it).
+ *
+ * When possible, you may prefer to use io.tmpfile, which 
+ * automatically removes the file when the program ends.
+*/
 static int os_tmpname (lua_State *L) {
   char buff[LUA_TMPNAMBUFSIZE];
   int err;
@@ -144,13 +188,19 @@ static int os_tmpname (lua_State *L) {
   return 1;
 }
 
-
+/*
+ * Returns the value of the process environment variable varname,
+ * or nil if the variable is not defined.
+ */
 static int os_getenv (lua_State *L) {
   lua_pushstring(L, getenv(luaL_checkstring(L, 1)));  /* if NULL push nil */
   return 1;
 }
 
-
+/*
+ * Returns an approximation of the amount in seconds of CPU time
+ * used by the program.
+ */
 static int os_clock (lua_State *L) {
   lua_pushnumber(L, ((lua_Number)clock())/(lua_Number)CLOCKS_PER_SEC);
   return 1;
@@ -165,11 +215,17 @@ static int os_clock (lua_State *L) {
 ** =======================================================
 */
 
+/**
+ * t[key] = value, t 为栈顶元素，可能使用元方法 
+ */
 static void setfield (lua_State *L, const char *key, int value) {
   lua_pushinteger(L, value);
   lua_setfield(L, -2, key);
 }
 
+/**
+ * 同上，t[key] = bool(value)
+ */
 static void setboolfield (lua_State *L, const char *key, int value) {
   if (value < 0)  /* undefined? */
     return;  /* does not set field */
@@ -177,6 +233,9 @@ static void setboolfield (lua_State *L, const char *key, int value) {
   lua_setfield(L, -2, key);
 }
 
+/**
+ * 获取 t[key], 不存在则返回 -1
+ */
 static int getboolfield (lua_State *L, const char *key) {
   int res;
   res = (lua_getfield(L, -1, key) == LUA_TNIL) ? -1 : lua_toboolean(L, -1);
@@ -184,9 +243,13 @@ static int getboolfield (lua_State *L, const char *key) {
   return res;
 }
 
-
+/**
+ * 获取 t[k], t为栈顶元素, t[k] 为整数直接返回,
+ * 若 t[k] 不是整数类型, 若 d >= 0, 返回d, 若 d < 0, 报错
+ */
 static int getfield (lua_State *L, const char *key, int d) {
   int res, isnum;
+  /* push t[k] to stack */
   lua_getfield(L, -1, key);
   res = (int)lua_tointegerx(L, -1, &isnum);
   if (!isnum) {
@@ -316,7 +379,16 @@ static int os_setlocale (lua_State *L) {
   return 1;
 }
 
-
+/*
+ * Calls the ISO C function exit to terminate the host program. 
+ * If code is true, the returned status is EXIT_SUCCESS; if code
+ * is false, the returned status is EXIT_FAILURE; if code is a 
+ * number, the returned status is this number. The default value
+ * for code is true.
+ *
+ * If the optional second argument close is true, closes the Lua
+ * state before exiting.
+ */
 static int os_exit (lua_State *L) {
   int status;
   if (lua_isboolean(L, 1))

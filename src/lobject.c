@@ -28,6 +28,7 @@
 
 
 
+/* 全局共享的一个 nil 对象 */
 LUAI_DDEF const TValue luaO_nilobject_ = {NILCONSTANT};
 
 
@@ -36,6 +37,7 @@ LUAI_DDEF const TValue luaO_nilobject_ = {NILCONSTANT};
 ** (eeeeexxx), where the real value is (1xxx) * 2^(eeeee - 1) if
 ** eeeee != 0 and (xxx) otherwise.
 */
+/* 0b1xxx * 2^(0beeeee - 1) */
 int luaO_int2fb (unsigned int x) {
   int e = 0;  /* exponent */
   if (x < 8) return x;
@@ -375,6 +377,11 @@ void luaO_tostring (lua_State *L, StkId obj) {
 }
 
 
+/**
+ * 向栈顶压入一个字符串
+ * str: 字符串首地址
+ * l: 字符串长度
+ */
 static void pushstr (lua_State *L, const char *str, size_t l) {
   setsvalue2s(L, L->top++, luaS_newlstr(L, str, l));
 }
