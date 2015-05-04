@@ -605,6 +605,8 @@ LUA_API int lua_toboolean (lua_State *L, int idx) {
  * 若元素不是 TString 也不是 Number类型，则转换失败，返回 NULL.
  * 
  * 转换完成后，栈位置idx指向的元素就变成了转换后的字符串类型.
+ * 
+ * 返回字符串指针
  */
 LUA_API const char *lua_tolstring (lua_State *L, int idx, size_t *len) {
   StkId o = index2addr(L, idx);
@@ -950,7 +952,9 @@ LUA_API int lua_pushthread (lua_State *L) {
  * of that value.
  */
 /**
- * 获取 gloable_state 中  l_registry 表中对应变量的值, 保存在栈顶，返回变量类型
+ * 获取 gloable_state 中  l_registry[LUA_RIDX_GLOBALS] 表中对应变量的值, 
+ * 保存在栈顶，返回变量类型
+ * 
  * name: 变量名
  * 
  * see http://www.lua.org/manual/5.3/manual.html#4.5 
@@ -978,7 +982,7 @@ LUA_API int lua_getglobal (lua_State *L, const char *name) {
  * Returns the type of the pushed value.
  */
 /**
- * 获取在位置 idx 的表中以栈顶元素为 key 的值，结果保存在栈顶
+ * t[k], t 为 stack[idx], k 为栈顶元素，结果保存在栈顶
  * 
  * 返回结果类型
  */
@@ -1011,7 +1015,7 @@ LUA_API int lua_getfield (lua_State *L, int idx, const char *k) {
 
 
 /*
- * Pushes onto the stack the value t[i], where t is the value at the
+ * Pushes onto the stack the value t[n], where t is the value at the
  * given index. As in Lua, this function may trigger a metamethod for
  * the "index" event (see §2.4).
 
@@ -1168,7 +1172,10 @@ LUA_API int lua_getuservalue (lua_State *L, int idx) {
  * Pops a value from the stack and sets it as the new value of global
  * name.
  */
-/* see http://www.lua.org/manual/5.3/manual.html#4.5 */
+/** 
+ * _G[name], _G 为 l_registry[ LUA_RIDX_GLOBALS ]
+ * see http://www.lua.org/manual/5.3/manual.html#4.5 
+ */
 LUA_API void lua_setglobal (lua_State *L, const char *name) {
   Table *reg = hvalue(&G(L)->l_registry);
   const TValue *gt;  /* global table */
@@ -1265,7 +1272,7 @@ LUA_API void lua_rawset (lua_State *L, int idx) {
 }
 
 /*
- * Does the equivalent of t[i] = v, where t is the table at the given
+ * Does the equivalent of t[n] = v, where t is the table at the given
  * index and v is the value at the top of the stack.
  *
  * This function pops the value from the stack. The assignment is raw;
@@ -1474,6 +1481,10 @@ LUA_API int lua_pcallk (lua_State *L, int nargs, int nresults, int errfunc,
  * Loads a Lua chunk without running it. If there are no errors, lua_load
  * pushes the compiled chunk as a Lua function on top of the stack.
  * Otherwise, it pushes an error message.
+ */
+/**
+ * mode: 'binary' or 'text' or NULL, 'binary' 表示预编译好的 chunk,
+ * 'text' 为文本程序，为 NULL 时自动判断
  */
 LUA_API int lua_load (lua_State *L, lua_Reader reader, void *data,
                       const char *chunkname, const char *mode) {

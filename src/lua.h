@@ -114,6 +114,12 @@ typedef int (*lua_KFunction) (lua_State *L, int status, lua_KContext ctx);
 /*
 ** Type for functions that read/write blocks when loading/dumping Lua chunks
 */
+/**
+ * ud: 封装数据块首地址
+ * size: 返回地址块大小
+ * 
+ * 返回封装数据块内的真正的数据块首地址
+ */
 typedef const char * (*lua_Reader) (lua_State *L, void *ud, size_t *sz);
 /*
  * lstrlib.c 中有一个writer
@@ -124,6 +130,7 @@ typedef int (*lua_Writer) (lua_State *L, const void *p, size_t sz, void *ud);
 /*
 ** Type for memory-allocation functions
 */
+/* 当 nsize 为 0 时，需要提供释放内存的功能 */
 typedef void * (*lua_Alloc) (void *ud, void *ptr, size_t osize, size_t nsize);
 
 
@@ -149,6 +156,11 @@ LUA_API lua_State *(lua_newstate) (lua_Alloc f, void *ud);
 LUA_API void       (lua_close) (lua_State *L);
 LUA_API lua_State *(lua_newthread) (lua_State *L);
 
+/**
+ * 设置 L->panic 为 panicf，并返回原来的值
+ * 
+ * 关于 panic 函数, 见 http://www.lua.org/manual/5.3/manual.html#4.6
+ */
 LUA_API lua_CFunction (lua_atpanic) (lua_State *L, lua_CFunction panicf);
 
 
@@ -213,7 +225,12 @@ LUA_API lua_Integer     (lua_tointegerx) (lua_State *L, int idx, int *isnum);
  * 则返回true, 即使是整数0也返回true
  */
 LUA_API int             (lua_toboolean) (lua_State *L, int idx);
-/* 将栈idx位置元素转成字符串, 元素只能是Number或TString类型 */
+/* 
+ * 将栈idx位置元素转成字符串, 元素只能是Number或TString类型 
+ * 转换完成后，栈位置idx指向的元素就变成了转换后的字符串类型.
+ * 
+ * 返回字符串指针
+ */
 LUA_API const char     *(lua_tolstring) (lua_State *L, int idx, size_t *len);
 LUA_API size_t          (lua_rawlen) (lua_State *L, int idx);
 LUA_API lua_CFunction   (lua_tocfunction) (lua_State *L, int idx);
@@ -302,6 +319,13 @@ LUA_API int (lua_gettable) (lua_State *L, int idx);
  * Returns the type of the pushed value.
  */
 LUA_API int (lua_getfield) (lua_State *L, int idx, const char *k);
+/*
+ * Pushes onto the stack the value t[n], where t is the value at the
+ * given index. As in Lua, this function may trigger a metamethod for
+ * the "index" event (see §2.4).
+
+ * Returns the type of the pushed value.
+ */
 LUA_API int (lua_geti) (lua_State *L, int idx, lua_Integer n);
 LUA_API int (lua_rawget) (lua_State *L, int idx);
 LUA_API int (lua_rawgeti) (lua_State *L, int idx, lua_Integer n);
@@ -327,10 +351,15 @@ LUA_API int  (lua_getuservalue) (lua_State *L, int idx);
 /*
 ** set functions (stack -> Lua)
 */
+/* _G[name] */
 LUA_API void  (lua_setglobal) (lua_State *L, const char *name);
 LUA_API void  (lua_settable) (lua_State *L, int idx);
 /**
  * 可以用来为lua lib设置属性, 比如 math.pi, math.huge
+ */
+/**
+ * t[k] = v, t 为 stack[idx], v 为栈顶元素
+ * 最后弹出 v, 可能使用元方法
  */
 LUA_API void  (lua_setfield) (lua_State *L, int idx, const char *k);
 LUA_API void  (lua_seti) (lua_State *L, int idx, lua_Integer n);
@@ -353,6 +382,9 @@ LUA_API void  (lua_setuservalue) (lua_State *L, int idx);
 */
 LUA_API void  (lua_callk) (lua_State *L, int nargs, int nresults,
                            lua_KContext ctx, lua_KFunction k);
+/**
+ * n: 参数个数，r 返回值个数
+ */
 #define lua_call(L,n,r)		lua_callk(L, (n), (r), 0, NULL)
 
 LUA_API int   (lua_pcallk) (lua_State *L, int nargs, int nresults, int errfunc,
@@ -405,6 +437,18 @@ LUA_API int   (lua_error) (lua_State *L);
 
 LUA_API int   (lua_next) (lua_State *L, int idx);
 
+/*
+ * Concatenates the n values at the top of the stack, pops them, 
+ * and leaves the result at the top. If n is 1, the result is the
+ * single value on the stack (that is, the function does nothing);
+ * if n is 0, the result is the empty string. Concatenation is 
+ * performed following the usual semantics of Lua (see §3.4.6).
+ *
+ * The string concatenation operator in Lua is denoted by two 
+ * dots ('..'). If both operands are strings or numbers, then 
+ * they are converted to strings according to the rules described 
+ * in §3.4.3. Otherwise, the __concat metamethod is called (see §2.4).
+ */
 LUA_API void  (lua_concat) (lua_State *L, int n);
 LUA_API void  (lua_len)    (lua_State *L, int idx);
 
@@ -435,6 +479,7 @@ LUA_API void      (lua_setallocf) (lua_State *L, lua_Alloc f, void *ud);
 
 #define lua_register(L,n,f) (lua_pushcfunction(L, (f)), lua_setglobal(L, (n)))
 
+/* 压入 light c function, 仅仅就是一个函数指针 */
 #define lua_pushcfunction(L,f)	lua_pushcclosure(L, (f), 0)
 
 #define lua_isfunction(L,n)	(lua_type(L, (n)) == LUA_TFUNCTION)

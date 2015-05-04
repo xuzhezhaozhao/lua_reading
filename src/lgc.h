@@ -127,6 +127,7 @@
   { if (iscollectable((uv)->v) && !upisopen(uv)) \
          luaC_upvalbarrier_(L,uv); }
 
+/* 标记永远不回收 o 对象 */
 LUAI_FUNC void luaC_fix (lua_State *L, GCObject *o);
 LUAI_FUNC void luaC_freeallobjects (lua_State *L);
 LUAI_FUNC void luaC_step (lua_State *L);

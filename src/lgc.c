@@ -181,6 +181,10 @@ void luaC_upvalbarrier_ (lua_State *L, UpVal *uv) {
 }
 
 
+/* 
+ * 标记永远不回收 o 对象, 必须在创建对象 o 后马上调用, 此时对象就在
+ * 'allgc' list 头部
+ */
 void luaC_fix (lua_State *L, GCObject *o) {
   global_State *g = G(L);
   lua_assert(g->allgc == o);  /* object must be 1st in 'allgc' list! */

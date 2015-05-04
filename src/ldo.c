@@ -711,6 +711,12 @@ static void f_parser (lua_State *L, void *ud) {
 }
 
 
+/*
+ * 将 z 中的数据编译成 lua function 放在栈顶，函数名为 name
+ *
+ * mode: 'binary' or 'text' or NULL, 'binary' 表示预编译好的 chunk,
+ * 'text' 为文本程序，为 NULL 时自动判断
+ */
 int luaD_protectedparser (lua_State *L, ZIO *z, const char *name,
                                         const char *mode) {
   struct SParser p;

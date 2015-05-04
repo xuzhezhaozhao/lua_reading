@@ -70,6 +70,9 @@ typedef struct LG {
 
 
 
+/*
+ * 根据偏移从 lua_State 结构指针 来获取对应的 LX 结构指针位置
+ */
 #define fromstate(L)	(cast(LX *, cast(lu_byte *, (L)) - offsetof(LX, l)))
 
 
@@ -146,6 +149,9 @@ void luaE_shrinkCI (lua_State *L) {
 }
 
 
+/**
+ * 分配栈空间, 当前函数调用信息初始化
+ */
 static void stack_init (lua_State *L1, lua_State *L) {
   int i; CallInfo *ci;
   /* initialize stack array */
@@ -178,6 +184,7 @@ static void freestack (lua_State *L) {
 /*
 ** Create registry table and its predefined values
 */
+/* 新建注册表中的 LUA_RIDX_MAINTHREAD 和 LUA_RIDX_GLOBALS 表 */
 static void init_registry (lua_State *L, global_State *g) {
   TValue temp;
   /* create registry */
@@ -292,6 +299,10 @@ void luaE_freethread (lua_State *L, lua_State *L1) {
 }
 
 
+
+/**
+ * luaL_newstate 函数封装了这个函数，lauxlib.c 中提供了一个 lua_Alloc 函数
+ */
 LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
   int i;
   lua_State *L;

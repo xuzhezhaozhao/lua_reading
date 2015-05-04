@@ -583,7 +583,7 @@ LUALIB_API void luaL_pushresultsize (luaL_Buffer *B, size_t sz) {
 
 
 /**
- * 将对象转为字符串放入buffer中, lua_State *从buffer中获得
+ * 将栈顶对象转为字符串放入buffer中, lua_State *从buffer中获得
  */
 LUALIB_API void luaL_addvalue (luaL_Buffer *B) {
   lua_State *L = B->L;
@@ -778,6 +778,13 @@ typedef struct LoadS {
 } LoadS;
 
 
+/**
+ * lua_Reader 类型函数
+ * ud: 封装数据块首地址
+ * size: 返回地址块大小
+ * 
+ * 返回封装在数据块中的真正的数据块首地址
+ */
 static const char *getS (lua_State *L, void *ud, size_t *size) {
   LoadS *ls = (LoadS *)ud;
   (void)L;  /* not used */
@@ -788,6 +795,14 @@ static const char *getS (lua_State *L, void *ud, size_t *size) {
 }
 
 
+/**
+ * 编译字符串
+ * buff: 首地址
+ * size: buff 长度
+ * name: 编译后的chunk名
+ * mode: 'binary' or 'text' or NULL, 'binary' 表示预编译好的 chunk,
+ * 'text' 为文本程序，为 NULL 时自动判断
+ */
 LUALIB_API int luaL_loadbufferx (lua_State *L, const char *buff, size_t size,
                                  const char *name, const char *mode) {
   LoadS ls;
@@ -831,6 +846,9 @@ LUALIB_API int luaL_callmeta (lua_State *L, int obj, const char *event) {
 }
 
 
+/**
+ * 返回 #stack[idx], 可能会触发元方法
+ */
 LUALIB_API lua_Integer luaL_len (lua_State *L, int idx) {
   lua_Integer l;
   int isnum;
@@ -980,6 +998,10 @@ LUALIB_API void luaL_setfuncs (lua_State *L, const luaL_Reg *l, int nup) {
 ** ensure that stack[idx][fname] has a table and push that table
 ** into the stack
 */
+/**
+ * stack[idx][fname] 是表的话返回 1，不是的话新建 table，返回 0;
+ * 表在栈顶
+ */
 LUALIB_API int luaL_getsubtable (lua_State *L, int idx, const char *fname) {
   if (lua_getfield(L, idx, fname) == LUA_TTABLE)
     return 1;  /* table already there */
@@ -1000,6 +1022,7 @@ LUALIB_API int luaL_getsubtable (lua_State *L, int idx, const char *fname) {
 ** if 'glb' is true, also registers the result in the global table.
 ** Leaves resulting module on the top.
 */
+/* global table 是 _G */
 LUALIB_API void luaL_requiref (lua_State *L, const char *modname,
                                lua_CFunction openf, int glb) {
   luaL_getsubtable(L, LUA_REGISTRYINDEX, "_LOADED");
@@ -1037,6 +1060,13 @@ LUALIB_API const char *luaL_gsub (lua_State *L, const char *s, const char *p,
 }
 
 
+/**
+ * ud, osize: 都没有用到
+ * nsize: 为 0 表示释放 ptr 指向的内存，调用 free(ptr), 否则调用 realloc
+ * 分配 nsize 字节大小空间
+ * 
+ * luaL_newstate 将其作为内存分配函数参数
+ */
 static void *l_alloc (void *ud, void *ptr, size_t osize, size_t nsize) {
   (void)ud; (void)osize;  /* not used */
   if (nsize == 0) {
@@ -1055,6 +1085,9 @@ static int panic (lua_State *L) {
 }
 
 
+/*
+ * 新建一个 lua_State, 失败返回 NULL
+ */
 LUALIB_API lua_State *luaL_newstate (void) {
   lua_State *L = lua_newstate(l_alloc, NULL);
   if (L) lua_atpanic(L, &panic);

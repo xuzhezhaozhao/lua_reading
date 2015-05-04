@@ -406,10 +406,6 @@ LUAMOD_API int luaopen_math (lua_State *L) {
   lua_pushinteger(L, LUA_MININTEGER);
   lua_setfield(L, -2, "mininteger");
 
-  /* test */
-  lua_pushstring(L, "0326");
-  lua_setfield(L, -2, "amazing");
-
   return 1;
 }
 

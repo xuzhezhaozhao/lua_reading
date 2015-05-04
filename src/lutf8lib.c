@@ -124,6 +124,9 @@ static int codepoint (lua_State *L) {
 }
 
 
+/**
+ * 将 stack[arg] 转为 utf char, 压入栈顶
+ */
 static void pushutfchar (lua_State *L, int arg) {
   lua_Integer code = luaL_checkinteger(L, arg);
   luaL_argcheck(L, 0 <= code && code <= MAXUNICODE, arg, "value out of range");

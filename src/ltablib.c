@@ -23,6 +23,7 @@
 /*
 ** Structure with table-access functions
 */
+/* t[n], t 为 stack[idx] */
 typedef struct {
   int (*geti) (lua_State *L, int idx, lua_Integer n);
   void (*seti) (lua_State *L, int idx, lua_Integer n);
@@ -52,6 +53,9 @@ static void checktab (lua_State *L, int arg, TabA *ta) {
 }
 
 
+/**
+ * 设置 ta 元方法，返回 #stack[idx], 可能会触发元方法
+ */
 #define aux_getn(L,n,ta)	(checktab(L, n, ta), luaL_len(L, n))
 
 
@@ -72,7 +76,15 @@ static int maxn (lua_State *L) {
 }
 #endif
 
-
+/*
+ * Inserts element value at position pos in list, shifting up the
+ * elements list[pos], list[pos+1], ···, list[#list]. The default 
+ * value for pos is #list+1, so that a call table.insert(t,x) 
+ * inserts x at the end of list t.
+ */
+/**
+ * list 在栈第一个位置
+ */
 static int tinsert (lua_State *L) {
   TabA ta;
   lua_Integer e = aux_getn(L, 1, &ta) + 1;  /* first empty element */
@@ -100,7 +112,15 @@ static int tinsert (lua_State *L) {
   return 0;
 }
 
-
+/*
+ * 
+ * Removes from list the element at position pos, returning the value
+ * of the removed element. When pos is an integer between 1 and #list,
+ * it shifts down the elements list[pos+1], list[pos+2], ···, list[#list]
+ * and erases element list[#list]; The index pos can also be 0 when 
+ * #list is 0, or #list + 1; in those cases, the function erases the
+ * element list[pos].
+ */
 static int tremove (lua_State *L) {
   TabA ta;
   lua_Integer size = aux_getn(L, 1, &ta);
@@ -118,6 +138,13 @@ static int tremove (lua_State *L) {
 }
 
 
+/*
+ * Moves elements from table a1 to table a2. This function performs
+ * the equivalent to the following multiple assignment: 
+ * a2[t],··· = a1[f],···,a1[e]. The default for a2 is a1. The 
+ * destination range can overlap with the source range. Index f 
+ * must be positive.
+ */
 static int tmove (lua_State *L) {
   TabA ta;
   lua_Integer f = luaL_checkinteger(L, 2);
@@ -162,6 +189,13 @@ static void addfield (lua_State *L, luaL_Buffer *b, TabA *ta, lua_Integer i) {
 }
 
 
+/*
+ * Given a list where all elements are strings or numbers, returns the 
+ * string list[i]..sep..list[i+1] ··· sep..list[j]. The default 
+ * value for sep is the empty string, the default for i is 1, and the
+ * default for j is #list. If i is greater than j, returns the empty
+ * string.
+ */
 static int tconcat (lua_State *L) {
   TabA ta;
   luaL_Buffer b;
@@ -189,6 +223,11 @@ static int tconcat (lua_State *L) {
 ** =======================================================
 */
 
+/*
+ * Returns a new table with all parameters stored into keys 1, 2, etc. 
+ * and with a field "n" with the total number of parameters. Note that
+ * the resulting table may not be a sequence.
+ */
 static int pack (lua_State *L) {
   int i;
   int n = lua_gettop(L);  /* number of elements to pack */
@@ -201,7 +240,11 @@ static int pack (lua_State *L) {
   return 1;  /* return table */
 }
 
-
+/*
+ * Returns the elements from the given list. This function is equivalent to
+ *    return list[i], list[i+1], ···, list[j]
+ * By default, i is 1 and j is #list.
+ */
 static int unpack (lua_State *L) {
   TabA ta;
   lua_Integer i, e;
@@ -210,6 +253,7 @@ static int unpack (lua_State *L) {
   i = luaL_optinteger(L, 2, 1);
   e = luaL_opt(L, luaL_checkinteger, 3, luaL_len(L, 1));
   if (i > e) return 0;  /* empty range */
+  /* TODO e = -1, i = -1, 溢出？ 应该是个bug */
   n = (lua_Unsigned)e - i;  /* number of elements minus 1 (avoid overflows) */
   if (n >= (unsigned int)INT_MAX  || !lua_checkstack(L, (int)(++n)))
     return luaL_error(L, "too many results to unpack");
@@ -253,6 +297,10 @@ static int sort_comp (lua_State *L, int a, int b) {
     return lua_compare(L, a, b, LUA_OPLT);
 }
 
+/*
+ * l: 起始位置
+ * u: 结束位置
+ */
 static void auxsort (lua_State *L, TabA *ta, int l, int u) {
   while (l < u) {  /* for tail recursion */
     int i, j;
@@ -316,6 +364,19 @@ static void auxsort (lua_State *L, TabA *ta, int l, int u) {
   }  /* repeat the routine for the larger one */
 }
 
+/*
+ * Sorts list elements in a given order, in-place, from list[1] 
+ * to list[#list]. If comp is given, then it must be a function 
+ * that receives two list elements and returns true when the 
+ * first element must come before the second in the final order
+ * (so that not comp(list[i+1],list[i]) will be true after the sort).
+ * If comp is not given, then the standard Lua operator < is used
+ * instead.
+ *
+ * The sort algorithm is not stable; that is, elements considered equal
+ * by the given order may have their relative positions changed by the
+ * sort.
+ */
 static int sort (lua_State *L) {
   TabA ta;
   int n = (int)aux_getn(L, 1, &ta);

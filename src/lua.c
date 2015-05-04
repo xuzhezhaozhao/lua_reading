@@ -270,10 +270,14 @@ static int dolibrary (lua_State *L, const char *name) {
 /*
 ** Returns the string to be used as a prompt by the interpreter.
 */
+/*
+ * firstline: 为 1 表示命令开始行, > ，为 0 表示命令接续上一行, >>
+ */
 static const char *get_prompt (lua_State *L, int firstline) {
   const char *p;
   lua_getglobal(L, firstline ? "_PROMPT" : "_PROMPT2");
   p = lua_tostring(L, -1);
+  /* 表中没有定义就使用默认值 */
   if (p == NULL) p = (firstline ? LUA_PROMPT : LUA_PROMPT2);
   return p;
 }
@@ -369,6 +373,7 @@ static int multiline (lua_State *L) {
 */
 static int loadline (lua_State *L) {
   int status;
+  /* 清空栈 */
   lua_settop(L, 0);
   if (!pushline(L, 1))
     return -1;  /* no input */
@@ -608,4 +613,3 @@ int main (int argc, char **argv) {
   lua_close(L);
   return (result && status == LUA_OK) ? EXIT_SUCCESS : EXIT_FAILURE;
 }
-

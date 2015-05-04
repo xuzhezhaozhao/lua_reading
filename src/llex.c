@@ -66,6 +66,9 @@ static void save (LexState *ls, int c) {
 }
 
 
+/**
+ * 新建'_ENV'字符串 和 lex 保留关键字, 插入string hash table中，并标记为不可回收
+ */
 void luaX_init (lua_State *L) {
   int i;
   TString *e = luaS_new(L, LUA_ENV);  /* create env name */

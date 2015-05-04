@@ -223,6 +223,11 @@ LUALIB_API void (luaL_requiref) (lua_State *L, const char *modname,
  */
 #define luaL_opt(L,f,n,d)	(lua_isnoneornil(L,(n)) ? (d) : f(L,(n)))
 
+/** 
+ * s: string
+ * sz: string length
+ * n: "=stdin"
+ */
 #define luaL_loadbuffer(L,s,sz,n)	luaL_loadbufferx(L,s,sz,n,NULL)
 
 
@@ -269,7 +274,7 @@ LUALIB_API void (luaL_addlstring) (luaL_Buffer *B, const char *s, size_t l);
 /* 写入 '\0' 结尾的字符串 */
 LUALIB_API void (luaL_addstring) (luaL_Buffer *B, const char *s);
 /**
- * 将对象转为字符串放入buffer中, lua_State *从buffer中获得
+ * 将栈顶对象转为字符串放入buffer中, lua_State *从buffer中获得
  */
 LUALIB_API void (luaL_addvalue) (luaL_Buffer *B);
 /**

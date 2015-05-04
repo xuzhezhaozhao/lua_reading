@@ -62,6 +62,10 @@
 /* 新建一个大小为s的对象, 实质就是分配一块大小为s的内存 */
 #define luaM_newobject(L,tag,s)	luaM_realloc_(L, NULL, tag, (s))
 
+/**
+ * nelems: 容器中元素个数
+ * size: 容器大小
+ */
 #define luaM_growvector(L,v,nelems,size,t,limit,e) \
           if ((nelems)+1 > (size)) \
             ((v)=cast(t *, luaM_growaux_(L,v,&(size),sizeof(t),limit,e)))

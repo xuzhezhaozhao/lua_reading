@@ -20,6 +20,9 @@
 #include "lzio.h"
 
 
+/*
+ * 向缓冲流中填充数据并返回第一个字符, 无数据填充即流结尾返回 EOZ
+ */
 int luaZ_fill (ZIO *z) {
   size_t size;
   lua_State *L = z->L;
@@ -35,6 +38,7 @@ int luaZ_fill (ZIO *z) {
 }
 
 
+/* 初始化 ZIO 结构 */
 void luaZ_init (lua_State *L, ZIO *z, lua_Reader reader, void *data) {
   z->L = L;
   z->reader = reader;

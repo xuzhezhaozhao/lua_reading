@@ -45,6 +45,16 @@
 #define MINSIZEARRAY	4
 
 
+
+/**
+ * 管理可变长数组的, 其主要策略是当数组空间不够时,扩大为原来的两倍, 
+ * 无法增长则报错。
+ *
+ * size: 原来元素个数, 最后返回实际分配的元素个数
+ * size_elems: 单个元素的大小
+ * limit: 元素个数最大限制
+ * what: 元素类型描述，出错打印错误信息用的
+ */
 void *luaM_growaux_ (lua_State *L, void *block, int *size, size_t size_elems,
                      int limit, const char *what) {
   void *newblock;
