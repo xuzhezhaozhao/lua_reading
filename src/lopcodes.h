@@ -71,29 +71,43 @@ enum OpMode {iABC, iABx, iAsBx, iAx};  /* basic instruction format */
 #endif
 
 
+/* 255 */
 #define MAXARG_A        ((1<<SIZE_A)-1)
+/* 511 */
 #define MAXARG_B        ((1<<SIZE_B)-1)
 #define MAXARG_C        ((1<<SIZE_C)-1)
 
 
 /* creates a mask with 'n' 1 bits at position 'p' */
+/* 从右到左从位置 p 开始 n 个 1 */
 #define MASK1(n,p)	((~((~(Instruction)0)<<(n)))<<(p))
 
 /* creates a mask with 'n' 0 bits at position 'p' */
+/* 从右到左从位置 p 开始 n 个 0 */
 #define MASK0(n,p)	(~MASK1(n,p))
 
 /*
 ** the following macros help to manipulate instructions
 */
 
+/* get 和 set 6 bits 操作码 */
 #define GET_OPCODE(i)	(cast(OpCode, ((i)>>POS_OP) & MASK1(SIZE_OP,0)))
+/* o 低 6 bits 就为 opcode 值 */
 #define SET_OPCODE(i,o)	((i) = (((i)&MASK0(SIZE_OP,POS_OP)) | \
 		((cast(Instruction, o)<<POS_OP)&MASK1(SIZE_OP,POS_OP))))
 
+/* 
+ * get 和 set 指令参数
+ * 
+ * pos: arg起始位置
+ * size: arg 位长度
+ * v: 低 size bit 为参数码
+ */
 #define getarg(i,pos,size)	(cast(int, ((i)>>pos) & MASK1(size,0)))
 #define setarg(i,v,pos,size)	((i) = (((i)&MASK0(size,pos)) | \
                 ((cast(Instruction, v)<<pos)&MASK1(size,pos))))
 
+/* A, B, C, Bx, Ax, sBx */
 #define GETARG_A(i)	getarg(i, POS_A, SIZE_A)
 #define SETARG_A(i,v)	setarg(i, v, POS_A, SIZE_A)
 
@@ -109,10 +123,12 @@ enum OpMode {iABC, iABx, iAsBx, iAx};  /* basic instruction format */
 #define GETARG_Ax(i)	getarg(i, POS_Ax, SIZE_Ax)
 #define SETARG_Ax(i,v)	setarg(i, v, POS_Ax, SIZE_Ax)
 
+/* 查看开头关于 sign argument 的描述 */
 #define GETARG_sBx(i)	(GETARG_Bx(i)-MAXARG_sBx)
 #define SETARG_sBx(i,b)	SETARG_Bx((i),cast(unsigned int, (b)+MAXARG_sBx))
 
 
+/* 将 arg a, b, c 打入 o 对应位置, 创造一个 mask*/
 #define CREATE_ABC(o,a,b,c)	((cast(Instruction, o)<<POS_OP) \
 			| (cast(Instruction, a)<<POS_A) \
 			| (cast(Instruction, b)<<POS_B) \
@@ -131,23 +147,29 @@ enum OpMode {iABC, iABx, iAsBx, iAx};  /* basic instruction format */
 */
 
 /* this bit 1 means constant (0 means register) */
+/* bit 8 标识 arg 是寄存器还是常数 */
+/* 256 */
 #define BITRK		(1 << (SIZE_B - 1))
 
 /* test whether value is a constant */
 #define ISK(x)		((x) & BITRK)
 
 /* gets the index of the constant */
+/* 0 ~ 255 */
 #define INDEXK(r)	((int)(r) & ~BITRK)
 
+/* 255 */
 #define MAXINDEXRK	(BITRK - 1)
 
 /* code a constant index as a RK value */
+/* 设置 bit 8 为 1 */
 #define RKASK(x)	((x) | BITRK)
 
 
 /*
 ** invalid register that fits in 8 bits
 */
+/* 255 */
 #define NO_REG		MAXARG_A
 
 
@@ -164,74 +186,76 @@ enum OpMode {iABC, iABx, iAsBx, iAx};  /* basic instruction format */
 
 typedef enum {
 /*----------------------------------------------------------------------
-name		args	description
+name				args    description
 ------------------------------------------------------------------------*/
-OP_MOVE,/*	A B	R(A) := R(B)					*/
-OP_LOADK,/*	A Bx	R(A) := Kst(Bx)					*/
-OP_LOADKX,/*	A 	R(A) := Kst(extra arg)				*/
-OP_LOADBOOL,/*	A B C	R(A) := (Bool)B; if (C) pc++			*/
-OP_LOADNIL,/*	A B	R(A), R(A+1), ..., R(A+B) := nil		*/
-OP_GETUPVAL,/*	A B	R(A) := UpValue[B]				*/
+OP_MOVE,		/*	A B		R(A) := R(B)						*/
+OP_LOADK,		/*	A Bx	R(A) := Kst(Bx)						*/
+OP_LOADKX,		/*	A 		R(A) := Kst(extra arg)				*/
+OP_LOADBOOL,	/*	A B C	R(A) := (Bool)B; if (C) pc++		*/
+OP_LOADNIL,		/*	A B		R(A), R(A+1), ..., R(A+B) := nil	*/
+OP_GETUPVAL,	/*	A B		R(A) := UpValue[B]					*/
 
-OP_GETTABUP,/*	A B C	R(A) := UpValue[B][RK(C)]			*/
-OP_GETTABLE,/*	A B C	R(A) := R(B)[RK(C)]				*/
+OP_GETTABUP,	/*	A B C	R(A) := UpValue[B][RK(C)]			*/
+OP_GETTABLE,	/*	A B C	R(A) := R(B)[RK(C)]					*/
 
-OP_SETTABUP,/*	A B C	UpValue[A][RK(B)] := RK(C)			*/
-OP_SETUPVAL,/*	A B	UpValue[B] := R(A)				*/
-OP_SETTABLE,/*	A B C	R(A)[RK(B)] := RK(C)				*/
+OP_SETTABUP,	/*	A B C	UpValue[A][RK(B)] := RK(C)			*/
+OP_SETUPVAL,	/*	A B		UpValue[B] := R(A)					*/
+OP_SETTABLE,	/*	A B C	R(A)[RK(B)] := RK(C)				*/
 
-OP_NEWTABLE,/*	A B C	R(A) := {} (size = B,C)				*/
+OP_NEWTABLE,	/*	A B C	R(A) := {} (size = B,C)				*/
+	
+OP_SELF,		/*	A B C	R(A+1) := R(B); R(A) := R(B)[RK(C)]	*/
 
-OP_SELF,/*	A B C	R(A+1) := R(B); R(A) := R(B)[RK(C)]		*/
+OP_ADD,			/*	A B C	R(A) := RK(B) + RK(C)				*/
+OP_SUB,			/*	A B C	R(A) := RK(B) - RK(C)				*/
+OP_MUL,			/*	A B C	R(A) := RK(B) * RK(C)				*/
+OP_MOD,			/*	A B C	R(A) := RK(B) % RK(C)				*/
+OP_POW,			/*	A B C	R(A) := RK(B) ^ RK(C)				*/
+OP_DIV,			/*	A B C	R(A) := RK(B) / RK(C)				*/
+OP_IDIV	,		/*	A B C	R(A) := RK(B) // RK(C)				*/
+OP_BAND,		/*	A B C	R(A) := RK(B) & RK(C)				*/
+OP_BOR,			/*	A B C	R(A) := RK(B) | RK(C)				*/
+OP_BXOR,		/*	A B C	R(A) := RK(B) ~ RK(C)				*/
+OP_SHL,			/*	A B C	R(A) := RK(B) << RK(C)				*/
+OP_SHR,			/*	A B C	R(A) := RK(B) >> RK(C)				*/
+OP_UNM,			/*	A B		R(A) := -R(B)						*/
+OP_BNOT,		/*	A B		R(A) := ~R(B)						*/
+OP_NOT,			/*	A B		R(A) := not R(B)					*/
+OP_LEN,			/*	A B		R(A) := length of R(B)				*/
 
-OP_ADD,/*	A B C	R(A) := RK(B) + RK(C)				*/
-OP_SUB,/*	A B C	R(A) := RK(B) - RK(C)				*/
-OP_MUL,/*	A B C	R(A) := RK(B) * RK(C)				*/
-OP_MOD,/*	A B C	R(A) := RK(B) % RK(C)				*/
-OP_POW,/*	A B C	R(A) := RK(B) ^ RK(C)				*/
-OP_DIV,/*	A B C	R(A) := RK(B) / RK(C)				*/
-OP_IDIV,/*	A B C	R(A) := RK(B) // RK(C)				*/
-OP_BAND,/*	A B C	R(A) := RK(B) & RK(C)				*/
-OP_BOR,/*	A B C	R(A) := RK(B) | RK(C)				*/
-OP_BXOR,/*	A B C	R(A) := RK(B) ~ RK(C)				*/
-OP_SHL,/*	A B C	R(A) := RK(B) << RK(C)				*/
-OP_SHR,/*	A B C	R(A) := RK(B) >> RK(C)				*/
-OP_UNM,/*	A B	R(A) := -R(B)					*/
-OP_BNOT,/*	A B	R(A) := ~R(B)					*/
-OP_NOT,/*	A B	R(A) := not R(B)				*/
-OP_LEN,/*	A B	R(A) := length of R(B)				*/
+OP_CONCAT,		/*	A B C	R(A) := R(B).. ... ..R(C)			*/
 
-OP_CONCAT,/*	A B C	R(A) := R(B).. ... ..R(C)			*/
+OP_JMP,			/*	A sBx	pc+=sBx; if (A) close all upvalues >= R(A - 1)	*/
+OP_EQ,			/*	A B C	if ((RK(B) == RK(C)) ~= A) then pc++			*/
+OP_LT,			/*	A B C	if ((RK(B) <  RK(C)) ~= A) then pc++			*/
+OP_LE,			/*	A B C	if ((RK(B) <= RK(C)) ~= A) then pc++			*/
 
-OP_JMP,/*	A sBx	pc+=sBx; if (A) close all upvalues >= R(A - 1)	*/
-OP_EQ,/*	A B C	if ((RK(B) == RK(C)) ~= A) then pc++		*/
-OP_LT,/*	A B C	if ((RK(B) <  RK(C)) ~= A) then pc++		*/
-OP_LE,/*	A B C	if ((RK(B) <= RK(C)) ~= A) then pc++		*/
+OP_TEST,		/*	A C		if not (R(A) <=> C) then pc++					*/
+OP_TESTSET,		/*	A B C	if (R(B) <=> C) then R(A) := R(B) else pc++		*/
 
-OP_TEST,/*	A C	if not (R(A) <=> C) then pc++			*/
-OP_TESTSET,/*	A B C	if (R(B) <=> C) then R(A) := R(B) else pc++	*/
+OP_CALL,		/*	A B C	R(A), ... ,R(A+C-2) :=
+							R(A)(R(A+1), ... ,R(A+B-1)) 					*/
+OP_TAILCALL,	/*	A B C	return R(A)(R(A+1), ... ,R(A+B-1))				*/
+OP_RETURN,		/*	A B		return R(A), ... ,R(A+B-2)	(see note)			*/
 
-OP_CALL,/*	A B C	R(A), ... ,R(A+C-2) := R(A)(R(A+1), ... ,R(A+B-1)) */
-OP_TAILCALL,/*	A B C	return R(A)(R(A+1), ... ,R(A+B-1))		*/
-OP_RETURN,/*	A B	return R(A), ... ,R(A+B-2)	(see note)	*/
+OP_FORLOOP,		/*	A sBx	R(A)+=R(A+2);
+							if R(A) <?= R(A+1) then { pc+=sBx; R(A+3)=R(A) }*/
+OP_FORPREP,		/*	A sBx	R(A)-=R(A+2); pc+=sBx							*/
 
-OP_FORLOOP,/*	A sBx	R(A)+=R(A+2);
-			if R(A) <?= R(A+1) then { pc+=sBx; R(A+3)=R(A) }*/
-OP_FORPREP,/*	A sBx	R(A)-=R(A+2); pc+=sBx				*/
+OP_TFORCALL,	/*	A C		R(A+3), ... ,R(A+2+C) := R(A)(R(A+1), R(A+2));	*/
+OP_TFORLOOP,	/*	A sBx	if R(A+1) ~= nil then { R(A)=R(A+1); pc += sBx }*/
 
-OP_TFORCALL,/*	A C	R(A+3), ... ,R(A+2+C) := R(A)(R(A+1), R(A+2));	*/
-OP_TFORLOOP,/*	A sBx	if R(A+1) ~= nil then { R(A)=R(A+1); pc += sBx }*/
+OP_SETLIST,		/*	A B C	R(A)[(C-1)*FPF+i] := R(A+i), 1 <= i <= B		*/
 
-OP_SETLIST,/*	A B C	R(A)[(C-1)*FPF+i] := R(A+i), 1 <= i <= B	*/
+OP_CLOSURE,		/*	A Bx	R(A) := closure(KPROTO[Bx])						*/
 
-OP_CLOSURE,/*	A Bx	R(A) := closure(KPROTO[Bx])			*/
+OP_VARARG,		/*	A B		R(A), R(A+1), ..., R(A+B-2) = vararg			*/
 
-OP_VARARG,/*	A B	R(A), R(A+1), ..., R(A+B-2) = vararg		*/
-
-OP_EXTRAARG/*	Ax	extra (larger) argument for previous opcode	*/
+OP_EXTRAARG		/*	Ax		extra (larger) argument for previous opcode		*/
 } OpCode;
 
 
+/* 指令集指令数量 */
 #define NUM_OPCODES	(cast(int, OP_EXTRAARG) + 1)
 
 
@@ -278,6 +302,10 @@ enum OpArgMask {
 
 LUAI_DDEC const lu_byte luaP_opmodes[NUM_OPCODES];
 
+/**
+ * 指令的特性被编码进了一个字节, 下面的宏的提取出指令的特性, 
+ * 可以参考 lopcodes.c 编码指令特性的代码
+ */
 #define getOpMode(m)	(cast(enum OpMode, luaP_opmodes[m] & 3))
 #define getBMode(m)	(cast(enum OpArgMask, (luaP_opmodes[m] >> 4) & 3))
 #define getCMode(m)	(cast(enum OpArgMask, (luaP_opmodes[m] >> 2) & 3))

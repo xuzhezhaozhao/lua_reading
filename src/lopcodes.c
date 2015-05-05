@@ -119,6 +119,6 @@ LUAI_DDEF const lu_byte luaP_opmodes[NUM_OPCODES] = {
  ,opmode(0, 0, OpArgU, OpArgU, iABC)		/* OP_SETLIST */
  ,opmode(0, 1, OpArgU, OpArgN, iABx)		/* OP_CLOSURE */
  ,opmode(0, 1, OpArgU, OpArgN, iABC)		/* OP_VARARG */
- ,opmode(0, 0, OpArgU, OpArgU, iAx)		/* OP_EXTRAARG */
+ ,opmode(0, 0, OpArgU, OpArgU, iAx)			/* OP_EXTRAARG */
 };
 
