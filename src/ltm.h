@@ -45,6 +45,13 @@ typedef enum {
 
 
 
+/**
+ * 利用table 的 flags 字段 cache 没有的元方法来快速判断是否需要调用函数
+ * 还是直接返回 NULL
+ * g: global_State
+ * et: 元表
+ * e: 元方法序列号
+ */
 #define gfasttm(g,et,e) ((et) == NULL ? NULL : \
   ((et)->flags & (1u<<(e))) ? NULL : luaT_gettm(et, e, (g)->tmname[e]))
 
