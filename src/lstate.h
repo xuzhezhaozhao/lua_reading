@@ -73,7 +73,9 @@ typedef struct CallInfo {
   struct CallInfo *previous, *next;  /* dynamic call link */
   union {
     struct {  /* only for Lua functions */
+      /* 当前函数的第一个参数位置 */
       StkId base;  /* base for this function */
+	  /* 代码指令执行点, 类似 PC 寄存器 */
       const Instruction *savedpc;
     } l;
     struct {  /* only for C functions */
@@ -84,6 +86,7 @@ typedef struct CallInfo {
   } u;
   ptrdiff_t extra;
   short nresults;  /* expected number of results from this function */
+  /* 下面就是状态类型宏定义 */
   lu_byte callstatus;
 } CallInfo;
 

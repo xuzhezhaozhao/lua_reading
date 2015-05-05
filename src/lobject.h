@@ -515,6 +515,7 @@ typedef struct Proto {
   int linedefined;
   int lastlinedefined;
   TValue *k;  /* constants used by the function */
+  /* 函数原型的指令序列 */
   Instruction *code;
   struct Proto **p;  /* functions defined inside the function */
   int *lineinfo;  /* map from opcodes to source lines (debug information) */
@@ -689,6 +690,10 @@ LUAI_FUNC void luaO_tostring (lua_State *L, StkId obj);
 LUAI_FUNC const char *luaO_pushvfstring (lua_State *L, const char *fmt,
                                                        va_list argp);
 LUAI_FUNC const char *luaO_pushfstring (lua_State *L, const char *fmt, ...);
+/**
+ * 获取源代码描述, 存在 out 中, bufflen 为描述字符最大长度;
+ * 调试中很有用
+ */
 LUAI_FUNC void luaO_chunkid (char *out, const char *source, size_t len);
 
 

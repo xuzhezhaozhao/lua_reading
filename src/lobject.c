@@ -476,6 +476,10 @@ const char *luaO_pushfstring (lua_State *L, const char *fmt, ...) {
 
 #define addstr(a,b,l)	( memcpy(a,b,(l) * sizeof(char)), a += (l) )
 
+/**
+ * 获取源代码描述, 存在 out 中, bufflen 为描述字符最大长度;
+ * 调试中很有用
+ */
 void luaO_chunkid (char *out, const char *source, size_t bufflen) {
   size_t l = strlen(source);
   if (*source == '=') {  /* 'literal' source */

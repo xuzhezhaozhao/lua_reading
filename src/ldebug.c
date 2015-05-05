@@ -97,6 +97,9 @@ LUA_API int lua_getstack (lua_State *L, int level, lua_Debug *ar) {
 }
 
 
+/**
+ * 获取 upvalue 名字, 默认为 '?'
+ */
 static const char *upvalname (Proto *p, int uv) {
   TString *s = check_exp(uv < p->sizeupvalues, p->upvalues[uv].name);
   if (s == NULL) return "?";
@@ -516,6 +519,9 @@ static const char *getupvalname (CallInfo *ci, const TValue *o,
 }
 
 
+/**
+ * 得到对象 o 的类型名 和 其相应的变量名, 结果放在栈顶
+ */
 static const char *varinfo (lua_State *L, const TValue *o) {
   const char *name = NULL;  /* to avoid warnings */
   CallInfo *ci = L->ci;
@@ -572,6 +578,9 @@ l_noret luaG_ordererror (lua_State *L, const TValue *p1, const TValue *p2) {
 }
 
 
+/**
+ * 添加错误描述信息, 放在栈顶
+ */
 static void addinfo (lua_State *L, const char *msg) {
   CallInfo *ci = L->ci;
   if (isLua(ci)) {  /* is Lua code? */
@@ -588,6 +597,9 @@ static void addinfo (lua_State *L, const char *msg) {
 }
 
 
+/**
+ * 错误描述信息已经存在栈顶了
+ */
 l_noret luaG_errormsg (lua_State *L) {
   if (L->errfunc != 0) {  /* is there an error handling function? */
     StkId errfunc = restorestack(L, L->errfunc);
@@ -600,6 +612,9 @@ l_noret luaG_errormsg (lua_State *L) {
 }
 
 
+/**
+ * 报运行时错, 添加详细的错误描述信息, 比如出错函数, 文件名, 行号等
+ */
 l_noret luaG_runerror (lua_State *L, const char *fmt, ...) {
   va_list argp;
   va_start(argp, fmt);

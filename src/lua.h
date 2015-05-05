@@ -102,7 +102,10 @@ typedef LUA_KCONTEXT lua_KContext;
 /*
 ** Type for C functions registered with Lua
 */
-/* 通过栈来传递参数 */
+/*
+ * 通过栈来传递参数
+ * 返回值就是该函数 返回值的个数, 也就是函数push到栈上元素个数
+ */
 typedef int (*lua_CFunction) (lua_State *L);
 
 /*

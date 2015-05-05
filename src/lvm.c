@@ -654,10 +654,17 @@ void luaV_finishOp (lua_State *L) {
 #define vmcase(l)	case l:
 #define vmbreak		break
 
+/**
+ * 执行 Lua function, 相关调用信息 L->ci 已经设置好的 
+ * 
+ * 实质是逐指令执行
+ */
 void luaV_execute (lua_State *L) {
   CallInfo *ci = L->ci;
   LClosure *cl;
+  /* 函数所用到的常量 */
   TValue *k;
+  /* 当前函数的第一个参数位置 */
   StkId base;
  newframe:  /* reentry point when frame changes (call/return) */
   lua_assert(ci == L->ci);
@@ -665,6 +672,7 @@ void luaV_execute (lua_State *L) {
   k = cl->p->k;
   base = ci->u.l.base;
   /* main loop of interpreter */
+  /* 通过 return 指令结束循环 */
   for (;;) {
     Instruction i = *(ci->u.l.savedpc++);
     StkId ra;

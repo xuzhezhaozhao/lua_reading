@@ -15,6 +15,9 @@
 #define api_incr_top(L)   {L->top++; api_check(L->top <= L->ci->top, \
 				"stack overflow");}
 
+/**
+ * 调整返回值个数, nres 为 -1 表示不截断返回值个数
+ */
 #define adjustresults(L,nres) \
     { if ((nres) == LUA_MULTRET && L->ci->top < L->top) L->ci->top = L->top; }
 

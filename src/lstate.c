@@ -108,7 +108,6 @@ void luaE_setdebt (global_State *g, l_mem debt) {
 
 
 /* 在函数调用链上新增一个 CallInfo */
-/* TODO */
 CallInfo *luaE_extendCI (lua_State *L) {
   CallInfo *ci = luaM_new(L, CallInfo);
   lua_assert(L->ci->next == NULL);
@@ -136,6 +135,7 @@ void luaE_freeCI (lua_State *L) {
 /*
 ** free half of the CallInfo structures not in use by a thread
 */
+/* 上面函数是全部回收, 这里是只回收一半 */
 void luaE_shrinkCI (lua_State *L) {
   CallInfo *ci = L->ci;
   while (ci->next != NULL) {  /* while there is 'next' */

@@ -59,6 +59,12 @@ LUAI_DDEC const char *const luaT_typenames_[LUA_TOTALTAGS];
 
 
 LUAI_FUNC const TValue *luaT_gettm (Table *events, TMS event, TString *ename);
+/**
+ * 获取对象的元方法
+ * 
+ * o: 对象
+ * event: 元方法类型
+ */
 LUAI_FUNC const TValue *luaT_gettmbyobj (lua_State *L, const TValue *o,
                                                        TMS event);
 /* 初始化元方法名数组 */

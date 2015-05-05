@@ -20,6 +20,7 @@
 #define incr_top(L) {L->top++; luaD_checkstack(L,0);}
 
 #define savestack(L,p)		((char *)(p) - (char *)L->stack)
+/* 获取 &stack[n], n 为栈偏移量 */
 #define restorestack(L,n)	((TValue *)((char *)L->stack + (n)))
 
 

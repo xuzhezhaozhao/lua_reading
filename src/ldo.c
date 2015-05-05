@@ -88,6 +88,9 @@ struct lua_longjmp {
 };
 
 
+/**
+ * 将出错信息放在 oldtop 位置, 并重新调整 L->top = oldtop + 1
+ */
 static void seterrorobj (lua_State *L, int errcode, StkId oldtop) {
   switch (errcode) {
     case LUA_ERRMEM: {  /* memory error? */
@@ -111,6 +114,7 @@ static void seterrorobj (lua_State *L, int errcode, StkId oldtop) {
  * 在C语言中模仿exception机制, 可以参考这篇文章:
  * http://www.di.unipi.it/~nids/docs/longjump_try_trow_catch.html
  * 
+ * 健壮的异常处理机制
  */
 l_noret luaD_throw (lua_State *L, int errcode) {
   if (L->errorJmp) {  /* thread has an error handler? */
@@ -138,6 +142,9 @@ l_noret luaD_throw (lua_State *L, int errcode) {
 }
 
 
+/**
+* 执行 f 函数, 抛出异常后会跳转到 LUAI_TRY 之后继续执行代码
+ */
 int luaD_rawrunprotected (lua_State *L, Pfunc f, void *ud) {
   unsigned short oldnCcalls = L->nCcalls;
   struct lua_longjmp lj;
@@ -157,6 +164,8 @@ int luaD_rawrunprotected (lua_State *L, Pfunc f, void *ud) {
 
 /**
  * 在对栈进行扩容后重新调整好栈的有关参数，相关指针需要重新赋值
+ * 
+ * oldstack: 原栈基址
  */
 static void correctstack (lua_State *L, TValue *oldstack) {
   CallInfo *ci;
@@ -195,7 +204,7 @@ void luaD_reallocstack (lua_State *L, int newsize) {
 }
 
 /**
- * 根据需要自动增长栈大小, 处理错误
+ * 根据需要自动增长栈大小, 扩展为原来的2倍, 处理错误
  * n: 还需要的栈空间大小
  */
 void luaD_growstack (lua_State *L, int n) {
@@ -217,6 +226,9 @@ void luaD_growstack (lua_State *L, int n) {
 }
 
 
+/**
+ * 计算当前栈的使用情况, 需要遍历所有的函数调用信息
+ */
 static int stackinuse (lua_State *L) {
   CallInfo *ci;
   StkId lim = L->top;
@@ -228,6 +240,9 @@ static int stackinuse (lua_State *L) {
 }
 
 
+/**
+ * 将栈收缩到一个合适的尺寸
+ */
 void luaD_shrinkstack (lua_State *L) {
   int inuse = stackinuse(L);
   int goodsize = inuse + (inuse / 8) + 2*EXTRA_STACK;
@@ -244,6 +259,9 @@ void luaD_shrinkstack (lua_State *L) {
 }
 
 
+/**
+ * 调用 L 中定义的钩子函数
+ */
 void luaD_hook (lua_State *L, int event, int line) {
   lua_Hook hook = L->hook;
   if (hook && L->allowhook) {
@@ -284,6 +302,10 @@ static void callhook (lua_State *L, CallInfo *ci) {
 }
 
 
+/**
+* 调整参数位置, 返回第一个fixed参数位置
+ * actual: 实际调用时的参数
+ */
 static StkId adjust_varargs (lua_State *L, Proto *p, int actual) {
   int i;
   int nfixargs = p->numparams;
@@ -306,12 +328,16 @@ static StkId adjust_varargs (lua_State *L, Proto *p, int actual) {
 ** it in stack below original 'func' so that 'luaD_precall' can call
 ** it. Raise an error if __call metafield is not a function.
 */
+/**
+ * 得到的元方法插入到 func 位置, 
+ */
 static void tryfuncTM (lua_State *L, StkId func) {
   const TValue *tm = luaT_gettmbyobj(L, func, TM_CALL);
   StkId p;
   if (!ttisfunction(tm))
     luaG_typeerror(L, func, "call");
   /* Open a hole inside the stack at 'func' */
+  /* 元素上移 */
   for (p = L->top; p > func; p--)
     setobjs2s(L, p, p-1);
   L->top++;  /* slot ensured by caller */
@@ -320,13 +346,20 @@ static void tryfuncTM (lua_State *L, StkId func) {
 
 
 
-/* 获取函数调用信息 CallInfo */
+/* 调用一个新函数时将调用链推进一步 */
 #define next_ci(L) (L->ci = (L->ci->next ? L->ci->next : luaE_extendCI(L)))
 
 
 /*
 ** returns true if function has been executed (C function)
 */
+/**
+ * 若 stack[func] 是 C function 则会执行该函数, 返回值放到 func 位置, 
+ * 若是 Lua Closure 则会初始化闭包和相关调用信息, 并不执行. 
+ * 若 stack[func] 不是可执行函数, 则会触发元方法 __call.
+ * 
+ * nresults: 期望的函数返回值数量
+ */
 int luaD_precall (lua_State *L, StkId func, int nresults) {
   lua_CFunction f;
   CallInfo *ci;
@@ -350,6 +383,7 @@ int luaD_precall (lua_State *L, StkId func, int nresults) {
       if (L->hookmask & LUA_MASKCALL)
         luaD_hook(L, LUA_HOOKCALL, -1);
       lua_unlock(L);
+	  /* n 此时保存 返回值个数 */
       n = (*f)(L);  /* do the actual call */
       lua_lock(L);
       api_checknelems(L, n);
@@ -357,7 +391,8 @@ int luaD_precall (lua_State *L, StkId func, int nresults) {
       return 1;
     }
     case LUA_TLCL: {  /* Lua function: prepare its call */
-      StkId base;
+	  /* 第一个参数位置 */
+      StkId base;	/* 第一个 fixed 参数位置 */
       Proto *p = clLvalue(func)->p;
       n = cast_int(L->top - func) - 1;  /* number of real arguments */
       luaD_checkstack(L, p->maxstacksize);
@@ -368,6 +403,7 @@ int luaD_precall (lua_State *L, StkId func, int nresults) {
         base = func + 1;
       }
       else {
+		/* 变长参数 */
         base = adjust_varargs(L, p, n);
         func = restorestack(L, funcr);  /* previous call can change stack */
       }
@@ -395,6 +431,15 @@ int luaD_precall (lua_State *L, StkId func, int nresults) {
 }
 
 
+/**
+ * C function 调用完之后调用, 将函数的返回值依次放到栈上合适位置(顶部), 多余
+ * 的返回值丢失, 不足的补 nil
+ * 
+ * firstResult: 第一个返回值位置
+ * 
+ * return (wanted - LUA_MULTRET);   0 iff wanted == LUA_MULTRET(-1), 
+ * wanted 为 期望的返回值数量
+ */
 int luaD_poscall (lua_State *L, StkId firstResult) {
   StkId res;
   int wanted, i;
