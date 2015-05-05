@@ -12,11 +12,14 @@
 
 
 /**
- * 有 n 个 upvalues 的闭包的大小
+ * 有 n 个 upvalues 的C闭包的大小
  */
 #define sizeCclosure(n)	(cast(int, sizeof(CClosure)) + \
                          cast(int, sizeof(TValue)*((n)-1)))
 
+/**
+ * 有 n 个 upvalues 的Lua闭包的大小
+ */
 #define sizeLclosure(n)	(cast(int, sizeof(LClosure)) + \
                          cast(int, sizeof(TValue *)*((n)-1)))
 
@@ -33,13 +36,20 @@ struct UpVal {
   lu_mem refcount;  /* reference counter */
   union {
     struct {  /* (when open) */
+	  /* 将栈上所有 upvalue 链接在一起, lua_State 中的 openupval 是链表的
+	   * 头指针 
+	   */
       UpVal *next;  /* linked list */
       int touched;  /* mark to avoid cycles with dead threads */
     } open;
+	/* close 之后 v 就指向这个值, 即 its own value */
     TValue value;  /* the value (when closed) */
   } u;
 };
 
+/**
+ * open 的意思是当前的 upvalue 还在栈上, 即上层函数还没有返回
+ */
 #define upisopen(up)	((up)->v != &(up)->u.value)
 
 

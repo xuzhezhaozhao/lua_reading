@@ -23,7 +23,7 @@
 
 
 /**
- * 新建一个有 n 个 upvalues 的闭包
+ * 新建一个有 n 个 upvalues 的C闭包
  */
 CClosure *luaF_newCclosure (lua_State *L, int n) {
   GCObject *o = luaC_newobj(L, LUA_TCCL, sizeCclosure(n));
@@ -33,6 +33,9 @@ CClosure *luaF_newCclosure (lua_State *L, int n) {
 }
 
 
+/**
+ * 新建一个有 n 个 upvalues 的Lua闭包
+ */
 LClosure *luaF_newLclosure (lua_State *L, int n) {
   GCObject *o = luaC_newobj(L, LUA_TLCL, sizeLclosure(n));
   LClosure *c = gco2lcl(o);
@@ -57,7 +60,13 @@ void luaF_initupvals (lua_State *L, LClosure *cl) {
 }
 
 
+/**
+ * 在栈上查找位置在 level 的 upvalue, 若该位置是 upvalue, 则返回该 upvalue, 
+ * 若没有找到, 则创建一个新 upvalue 指向 level 位置的值
+ */
 UpVal *luaF_findupval (lua_State *L, StkId level) {
+
+/* 采用二级指针是因为当没有找到要新建时要将新建的 upvalue 链接到 open list 中 */
   UpVal **pp = &L->openupval;
   UpVal *p;
   UpVal *uv;
@@ -73,6 +82,7 @@ UpVal *luaF_findupval (lua_State *L, StkId level) {
   uv->refcount = 0;
   uv->u.open.next = *pp;  /* link it to list of open upvalues */
   uv->u.open.touched = 1;
+  /* 修改 next 域 */
   *pp = uv;
   uv->v = level;  /* current value lives in the stack */
   if (!isintwups(L)) {  /* thread not in list of threads with upvalues? */
@@ -83,6 +93,9 @@ UpVal *luaF_findupval (lua_State *L, StkId level) {
 }
 
 
+/**
+ * 关闭栈 level 位置以上(包括level)的 upvalue, upvalue 引用为0则释放该对象 
+ */
 void luaF_close (lua_State *L, StkId level) {
   UpVal *uv;
   while (L->openupval != NULL && (uv = L->openupval)->v >= level) {
@@ -93,12 +106,16 @@ void luaF_close (lua_State *L, StkId level) {
     else {
       setobj(L, &uv->u.value, uv->v);  /* move value to upvalue slot */
       uv->v = &uv->u.value;  /* now current value lives here */
+	  /* TODO */
       luaC_upvalbarrier(L, uv);
     }
   }
 }
 
 
+/**
+ * 新建函数原型并完成初始化
+ */
 Proto *luaF_newproto (lua_State *L) {
   GCObject *o = luaC_newobj(L, LUA_TPROTO, sizeof(Proto));
   Proto *f = gco2p(o);
@@ -125,6 +142,7 @@ Proto *luaF_newproto (lua_State *L) {
 }
 
 
+/* 释放Proto分配的内存 */
 void luaF_freeproto (lua_State *L, Proto *f) {
   luaM_freearray(L, f->code, f->sizecode);
   luaM_freearray(L, f->p, f->sizep);
@@ -140,8 +158,15 @@ void luaF_freeproto (lua_State *L, Proto *f) {
 ** Look for n-th local variable at line 'line' in function 'func'.
 ** Returns NULL if not found.
 */
+/**
+ * 获取在第 pc 行可见的局部变量中的第 local_number 个局部变量
+ * 
+ * local_number: n-th local variable
+ * pc: line
+ */
 const char *luaF_getlocalname (const Proto *f, int local_number, int pc) {
   int i;
+  /* 遍历局部变量 */
   for (i = 0; i<f->sizelocvars && f->locvars[i].startpc <= pc; i++) {
     if (pc < f->locvars[i].endpc) {  /* is variable active? */
       local_number--;

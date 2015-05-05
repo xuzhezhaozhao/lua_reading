@@ -518,7 +518,9 @@ typedef struct Proto {
   Instruction *code;
   struct Proto **p;  /* functions defined inside the function */
   int *lineinfo;  /* map from opcodes to source lines (debug information) */
+  /* 是个数组指针 */
   LocVar *locvars;  /* information about local variables (debug information) */
+  /* 是个数组指针 */
   Upvaldesc *upvalues;  /* upvalue information */
   struct LClosure *cache;  /* last created closure with this prototype */
   TString  *source;  /* used for debug information */
