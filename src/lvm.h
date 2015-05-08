@@ -40,14 +40,16 @@
 	(ttisinteger(o) ? (*(i) = ivalue(o), 1) : luaV_tointeger_(o,i))
 
 /**
+ * 先将 v1, v2 转为 unsigned, 计算结果再转为 signed
  * op: 运算符
  * v1: 第一个操作数
  * v2: 第二个操作数
+ * TODO
  */
 #define intop(op,v1,v2) l_castU2S(l_castS2U(v1) op l_castS2U(v2))
 
 /**
- * 比较两个对象相等，不使用元方法
+ * 比较两个对象是否相等，不使用元方法
  */
 #define luaV_rawequalobj(t1,t2)		luaV_equalobj(NULL,t1,t2)
 

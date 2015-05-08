@@ -63,6 +63,14 @@ LUAI_FUNC void luaF_initupvals (lua_State *L, LClosure *cl);
 LUAI_FUNC UpVal *luaF_findupval (lua_State *L, StkId level);
 LUAI_FUNC void luaF_close (lua_State *L, StkId level);
 LUAI_FUNC void luaF_freeproto (lua_State *L, Proto *f);
+/*
+** Look for n-th local variable at line 'line' in function 'func'.
+** Returns NULL if not found.
+*/
+/**
+ * 获取在执行指令 pc 位置(相对位置)可见的局部变量中的第 local_number 
+ * 个局部变量
+ */
 LUAI_FUNC const char *luaF_getlocalname (const Proto *func, int local_number,
                                          int pc);
 

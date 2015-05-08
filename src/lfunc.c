@@ -159,10 +159,10 @@ void luaF_freeproto (lua_State *L, Proto *f) {
 ** Returns NULL if not found.
 */
 /**
- * 获取在第 pc 行可见的局部变量中的第 local_number 个局部变量
+ * 获取在执行指令 pc 位置(相对位置)可见的局部变量中的第 local_number 
+ * 个局部变量
  * 
  * local_number: n-th local variable
- * pc: line
  */
 const char *luaF_getlocalname (const Proto *f, int local_number, int pc) {
   int i;

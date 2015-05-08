@@ -27,6 +27,7 @@ typedef struct {
   int status;
 } DumpState;
 
+/* TODO ohoh*/
 
 /*
 ** All high-level dumps go through DumpVector; you can change it to
@@ -102,6 +103,7 @@ static void DumpConstants (const Proto *f, DumpState *D) {
     const TValue *o = &f->k[i];
     DumpByte(ttype(o), D);
     switch (ttype(o)) {
+		/*TODO*/
     case LUA_TNIL:
       break;
     case LUA_TBOOLEAN:

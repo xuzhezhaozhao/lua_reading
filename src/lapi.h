@@ -11,7 +11,7 @@
 #include "llimits.h"
 #include "lstate.h"
 
-/* 栈顶指针增加1 */
+/* 栈顶指针增加1, 并检查其是否小于当前函数栈顶 */
 #define api_incr_top(L)   {L->top++; api_check(L->top <= L->ci->top, \
 				"stack overflow");}
 

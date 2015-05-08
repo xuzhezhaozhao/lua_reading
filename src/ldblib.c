@@ -32,7 +32,6 @@ static int db_getregistry (lua_State *L) {
   return 1;
 }
 
-
 static int db_getmetatable (lua_State *L) {
   luaL_checkany(L, 1);
   if (!lua_getmetatable(L, 1)) {
@@ -108,7 +107,6 @@ static void settabsb (lua_State *L, const char *k, int v) {
   lua_setfield(L, -2, k);
 }
 
-
 /*
 ** In function 'db_getinfo', the call to 'lua_getinfo' may push
 ** results on the stack; later it creates the result table to put
@@ -128,6 +126,29 @@ static void treatstackoption (lua_State *L, lua_State *L1, const char *fname) {
 /*
 ** Calls 'lua_getinfo' and collects all results in a new table.
 */
+/**
+ * debug.getinfo ([thread,] f [, what])
+ *
+ * Returns a table with information about a function. You can give 
+ * the function directly or you can give a number as the value of f, 
+ * which means the function running at level f of the call stack of the 
+ * given thread: level 0 is the current function (getinfo itself); level 
+ * 1 is the function that called getinfo (except for tail calls, which do 
+ * not count on the stack); and so on. If f is a number larger than the 
+ * number of active functions, then getinfo returns nil.
+ *
+ * The returned table can contain all the fields returned by lua_getinfo, 
+ * with the string what describing which fields to fill in. The default 
+ * for what is to get all information available, except the table of 
+ * valid lines. If present, the option 'f' adds a field named func with 
+ * the function itself. If present, the option 'L' adds a field named 
+ * activelines with the table of valid lines.
+ *
+ * For instance, the expression debug.getinfo(1,"n").name returns a 
+ * table with a name for the current function, if a reasonable name can
+ * be found, and the expression debug.getinfo(print) returns a table with 
+ * all available information about the print function.
+ */
 static int db_getinfo (lua_State *L) {
   lua_Debug ar;
   int arg;
@@ -271,6 +292,10 @@ static int db_upvalueid (lua_State *L) {
 }
 
 
+/**
+ * Make the n1-th upvalue of the Lua closure f1 refer to the n2-th 
+ * upvalue of the Lua closure f2.
+ */
 static int db_upvaluejoin (lua_State *L) {
   int n1 = checkupval(L, 1, 2);
   int n2 = checkupval(L, 3, 4);

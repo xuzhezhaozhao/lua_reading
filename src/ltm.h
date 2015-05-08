@@ -51,6 +51,8 @@ typedef enum {
  * g: global_State
  * et: 元表
  * e: 元方法序列号
+ * 
+ * 当 settable 且没有触发元方法时将会使 flags 重置为 0
  */
 #define gfasttm(g,et,e) ((et) == NULL ? NULL : \
   ((et)->flags & (1u<<(e))) ? NULL : luaT_gettm(et, e, (g)->tmname[e]))

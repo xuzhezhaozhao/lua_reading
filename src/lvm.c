@@ -88,6 +88,7 @@ int luaV_tonumber_ (const TValue *obj, lua_Number *n) {
 ** mode == 1: takes the floor of the number
 ** mode == 2: takes the ceil of the number
 */
+/* 结果保存在 *p 中, 转换成功返回 1, 失败返回 0 */
 static int tointeger_aux (const TValue *obj, lua_Integer *p, int mode) {
   TValue v;
  again:
@@ -162,6 +163,7 @@ static int forlimit (const TValue *obj, lua_Integer *p, lua_Integer step,
 ** Main function for table access (invoking metamethods if needed).
 ** Compute 'val = t[key]'
 */
+/* 如果 table 中没有该 key, 则会触发元表方法 */
 void luaV_gettable (lua_State *L, const TValue *t, TValue *key, StkId val) {
   int loop;  /* counter to avoid infinite loops */
   for (loop = 0; loop < MAXTAGLOOP; loop++) {
@@ -254,6 +256,7 @@ static int l_strcmp (const TString *ls, const TString *rs) {
       else if (len == ll)  /* 'ls' is finished? */
         return -1;  /* 'ls' is smaller than 'rs' ('rs' is not finished) */
       /* both strings longer than 'len'; go on comparing after the '\0' */
+	  /* ++ 是跳过'\0' */
       len++;
       l += len; ll -= len; r += len; lr -= len;
     }
@@ -282,6 +285,7 @@ int luaV_lessthan (lua_State *L, const TValue *l, const TValue *r) {
 /*
 ** Main operation less than or equal to; return 'l <= r'.
 */
+/* 先尝试 __le, 没有则尝试 __lt */
 int luaV_lessequal (lua_State *L, const TValue *l, const TValue *r) {
   int res;
   lua_Number nl, nr;
@@ -443,6 +447,7 @@ lua_Integer luaV_div (lua_State *L, lua_Integer m, lua_Integer n) {
   if (l_castS2U(n) + 1u <= 1u) {  /* special cases: -1 or 0 */
     if (n == 0)
       luaG_runerror(L, "attempt to divide by zero");
+	/* TODO why overflow? */
     return intop(-, 0, m);   /* n==-1; avoid overflow with 0x80000...//-1 */
   }
   else {
@@ -672,7 +677,7 @@ void luaV_execute (lua_State *L) {
   k = cl->p->k;
   base = ci->u.l.base;
   /* main loop of interpreter */
-  /* 通过 return 指令结束循环 */
+  /* 通过 goto 或 return 指令结束循环 */
   for (;;) {
     Instruction i = *(ci->u.l.savedpc++);
     StkId ra;
@@ -1128,7 +1133,7 @@ void luaV_execute (lua_State *L) {
         l_tforloop:
         if (!ttisnil(ra + 1)) {  /* continue loop? */
           setobjs2s(L, ra, ra + 1);  /* save control variable */
-           ci->u.l.savedpc += GETARG_sBx(i);  /* jump back */
+          ci->u.l.savedpc += GETARG_sBx(i);  /* jump back */
         }
         vmbreak;
       }

@@ -280,6 +280,7 @@ typedef struct lua_TValue TValue;
     val_(io).gc = obj2gco(x_); settt_(io, ctb(LUA_TCCL)); \
     checkliveness(G(L),io); }
 
+/* set table */
 #define sethvalue(L,obj,x) \
   { TValue *io = (obj); Table *x_ = (x); \
     val_(io).gc = obj2gco(x_); settt_(io, ctb(LUA_TTABLE)); \
@@ -493,6 +494,7 @@ typedef struct Upvaldesc {
 */
 typedef struct LocVar {
   TString *varname;
+  /* 指令相对位置 */
   int startpc;  /* first point where variable is active */
   int endpc;    /* first point where variable is dead */
 } LocVar;
@@ -515,7 +517,7 @@ typedef struct Proto {
   int linedefined;
   int lastlinedefined;
   TValue *k;  /* constants used by the function */
-  /* 函数原型的指令序列 */
+  /* 函数原型的指令序列, 起始位置 */
   Instruction *code;
   struct Proto **p;  /* functions defined inside the function */
   int *lineinfo;  /* map from opcodes to source lines (debug information) */

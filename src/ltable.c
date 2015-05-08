@@ -623,7 +623,7 @@ const TValue *luaH_getstr (Table *t, TString *key) {
 ** main search function
 */
 /**
- * 返回 &t[key]
+ * 返回 &t[key], 不触发元方法
  */
 const TValue *luaH_get (Table *t, const TValue *key) {
   switch (ttype(key)) {

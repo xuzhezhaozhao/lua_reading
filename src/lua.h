@@ -347,6 +347,7 @@ LUA_API void *(lua_newuserdata) (lua_State *L, size_t sz);
 /**
  * 获取对象元表, 放在栈顶, 成功返回1，否则0
  */
+/* 将 idx 位置的 Udata 元素放在栈顶 */
 LUA_API int   (lua_getmetatable) (lua_State *L, int objindex);
 LUA_API int  (lua_getuservalue) (lua_State *L, int idx);
 
@@ -588,14 +589,18 @@ struct lua_Debug {
   const char *name;	/* (n) */
   const char *namewhat;	/* (n) 'global', 'local', 'field', 'method' */
   const char *what;	/* (S) 'Lua', 'C', 'main', 'tail' */
+  /* 源码字符串, '=[C]': C函数, '=?': 没有源码信息的Lua函数 */
   const char *source;	/* (S) */
   int currentline;	/* (l) */
+  /* 函数起始定义行 */
   int linedefined;	/* (S) */
+  /* 函数终止定义行 */
   int lastlinedefined;	/* (S) */
   unsigned char nups;	/* (u) number of upvalues */
   unsigned char nparams;/* (u) number of parameters */
   char isvararg;        /* (u) */
   char istailcall;	/* (t) */
+  /* 函数描述信息 */
   char short_src[LUA_IDSIZE]; /* (S) */
   /* private part */
   struct CallInfo *i_ci;  /* active function */

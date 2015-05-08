@@ -37,12 +37,18 @@
 static const char *getfuncname (lua_State *L, CallInfo *ci, const char **name);
 
 
+/**
+ * 当前指令 pc 相对位置偏移
+ */
 static int currentpc (CallInfo *ci) {
   lua_assert(isLua(ci));
   return pcRel(ci->u.l.savedpc, ci_func(ci)->p);
 }
 
 
+/**
+ * 获取当前指令对应的源码行号, 若没有行号信息则返回 -1
+ */
 static int currentline (CallInfo *ci) {
   return getfuncline(ci_func(ci)->p, currentpc(ci));
 }
@@ -51,6 +57,28 @@ static int currentline (CallInfo *ci) {
 /*
 ** this function can be called asynchronous (e.g. during a signal)
 */
+/**
+ * Sets the given function as a hook. The string mask and the number 
+ * count describe when the hook will be called. The string mask may 
+ * have any combination of the following characters, with the given
+ * meaning:
+ *
+ * 'c': the hook is called every time Lua calls a function;
+ * 'r': the hook is called every time Lua returns from a function;
+ * 'l': the hook is called every time Lua enters a new line of code.
+ * 
+ * Moreover, with a count different from zero, the hook is called also
+ * after every count instructions.
+ *
+ * When called without arguments, debug.sethook turns off the hook.
+ *
+ * When the hook is called, its first parameter is a string describing
+ * the event that has triggered its call: "call" (or "tail call"), 
+ * "return", "line", and "count". For line events, the hook also gets the
+ * new line number as its second parameter. Inside a hook, you can call 
+ * getinfo with level 2 to get more information about the running function
+ * (level 0 is the getinfo function, and level 1 is the hook function).
+ */
 LUA_API void lua_sethook (lua_State *L, lua_Hook func, int mask, int count) {
   if (func == NULL || mask == 0) {  /* turn off hooks? */
     mask = 0;
@@ -79,7 +107,17 @@ LUA_API int lua_gethookcount (lua_State *L) {
   return L->basehookcount;
 }
 
-
+/**
+ * Gets information about the interpreter runtime stack.
+ *
+ * This function fills parts of a lua_Debug structure with an 
+ * identification of the activation record of the function executing
+ * at a given level. Level 0 is the current running function, whereas
+ * level n+1 is the function that has called level n (except for tail 
+ * calls, which do not count on the stack). When there are no errors, 
+ * lua_getstack returns 1; when called with a level greater than the 
+ * stack depth, it returns 0.
+ */
 LUA_API int lua_getstack (lua_State *L, int level, lua_Debug *ar) {
   int status;
   CallInfo *ci;
@@ -107,6 +145,10 @@ static const char *upvalname (Proto *p, int uv) {
 }
 
 
+/**
+ * stack[pos] 返回函数第 n 个变长参数;
+ * 存在返回 "*(vararg)", 否则返回 NULL
+ */
 static const char *findvararg (CallInfo *ci, int n, StkId *pos) {
   int nparams = clLvalue(ci->func)->p->numparams;
   if (n >= ci->u.l.base - ci->func - nparams)
@@ -118,6 +160,12 @@ static const char *findvararg (CallInfo *ci, int n, StkId *pos) {
 }
 
 
+/**
+ * 返回调用 ci 执行到当前位置时的第 n 个局部变量的名字, pos 返回
+ * 变量位置; 变量不存在返回 NULL
+ *
+ * n 为负数表示获取 第 -n 个 变长参数名, 此时 pos 不返回变量位置
+ */
 static const char *findlocal (lua_State *L, CallInfo *ci, int n,
                               StkId *pos) {
   const char *name = NULL;
@@ -144,6 +192,27 @@ static const char *findlocal (lua_State *L, CallInfo *ci, int n,
 }
 
 
+/**
+ * Gets information about a local variable of a given activation record 
+ * or a given function.
+ * 
+ * In the first case, the parameter ar must be a valid activation
+ * record that was filled by a previous call to lua_getstack or given 
+ * as argument to a hook (see lua_Hook). The index n selects which local 
+ * variable to inspect; see debug.getlocal for details about variable 
+ * indices and names.
+ *
+ * lua_getlocal pushes the variable's value onto the stack and returns its 
+ * name.
+ *
+ * In the second case, ar must be NULL and the function to be inspected must 
+ * be at the top of the stack. In this case, only parameters of Lua functions 
+ * are visible (as there is no information about what variables are active) 
+ * and no values are pushed onto the stack.
+ *
+ * Returns NULL (and pushes nothing) when the index is greater than the 
+ * number of active local variables.
+ */
 LUA_API const char *lua_getlocal (lua_State *L, const lua_Debug *ar, int n) {
   const char *name;
   lua_lock(L);
@@ -166,6 +235,18 @@ LUA_API const char *lua_getlocal (lua_State *L, const lua_Debug *ar, int n) {
 }
 
 
+/**
+ * Sets the value of a local variable of a given activation record. 
+ * Parameters ar and n are as in lua_getlocal (see lua_getlocal). 
+ * lua_setlocal assigns the value at the top of the stack to the
+ * variable and returns its name. It also pops the value from the stack.
+ *
+ * Returns NULL (and pops nothing) when the index is greater than the 
+ * number of active local variables.
+ */
+/**
+ * 修改值在栈顶
+ */
 LUA_API const char *lua_setlocal (lua_State *L, const lua_Debug *ar, int n) {
   StkId pos = 0;  /* to avoid warnings */
   const char *name = findlocal(L, ar->i_ci, n, &pos);
@@ -179,6 +260,9 @@ LUA_API const char *lua_setlocal (lua_State *L, const lua_Debug *ar, int n) {
 }
 
 
+/**
+ * 往 ar 中填充函数相关信息
+ */
 static void funcinfo (lua_Debug *ar, Closure *cl) {
   if (noLuaClosure(cl)) {
     ar->source = "=[C]";
@@ -197,6 +281,10 @@ static void funcinfo (lua_Debug *ar, Closure *cl) {
 }
 
 
+/**
+ * f 不是Lua函数栈顶压入 nil, 否则在栈顶压入一个 table, 并置
+ * table[line] = true, line 为函数所占的所有行号
+ */
 static void collectvalidlines (lua_State *L, Closure *f) {
   if (noLuaClosure(f)) {
     setnilvalue(L->top);
@@ -267,6 +355,29 @@ static int auxgetinfo (lua_State *L, const char *what, lua_Debug *ar,
 }
 
 
+/**
+ * debug.getinfo ([thread,] f [, what])
+ *
+ * Returns a table with information about a function. You can give 
+ * the function directly or you can give a number as the value of f, 
+ * which means the function running at level f of the call stack of the 
+ * given thread: level 0 is the current function (getinfo itself); level 
+ * 1 is the function that called getinfo (except for tail calls, which do 
+ * not count on the stack); and so on. If f is a number larger than the 
+ * number of active functions, then getinfo returns nil.
+ *
+ * The returned table can contain all the fields returned by lua_getinfo, 
+ * with the string what describing which fields to fill in. The default 
+ * for what is to get all information available, except the table of 
+ * valid lines. If present, the option 'f' adds a field named func with 
+ * the function itself. If present, the option 'L' adds a field named 
+ * activelines with the table of valid lines.
+ *
+ * For instance, the expression debug.getinfo(1,"n").name returns a 
+ * table with a name for the current function, if a reasonable name can
+ * be found, and the expression debug.getinfo(print) returns a table with 
+ * all available information about the print function.
+ */
 LUA_API int lua_getinfo (lua_State *L, const char *what, lua_Debug *ar) {
   int status;
   Closure *cl;

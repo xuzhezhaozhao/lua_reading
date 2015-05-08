@@ -73,7 +73,7 @@ typedef struct CallInfo {
   struct CallInfo *previous, *next;  /* dynamic call link */
   union {
     struct {  /* only for Lua functions */
-      /* 当前函数的第一个参数位置 */
+      /* 当前函数的第一个固定(非变长)参数位置 */
       StkId base;  /* base for this function */
 	  /* 代码指令执行点, 类似 PC 寄存器 */
       const Instruction *savedpc;
@@ -103,6 +103,7 @@ typedef struct CallInfo {
 #define CIST_TAIL	(1<<5)	/* call was tail called */
 #define CIST_HOOKYIELD	(1<<6)	/* last hook called yielded */
 
+/* ci: CallInfo */
 #define isLua(ci)	((ci)->callstatus & CIST_LUA)
 
 /* assume that CIST_OAH has offset 0 and that 'v' is strictly 0/1 */
@@ -169,6 +170,7 @@ struct lua_State {
   GCObject *gclist;
   struct lua_State *twups;  /* list of threads with open upvalues */
   struct lua_longjmp *errorJmp;  /* current error recover point */
+  /* 调用链的头部 */
   CallInfo base_ci;  /* CallInfo for first level (C calling Lua) */
   lua_Hook hook;
   ptrdiff_t errfunc;  /* current error handling function (stack index) */

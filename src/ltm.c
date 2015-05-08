@@ -163,6 +163,7 @@ void luaT_trybinTM (lua_State *L, const TValue *p1, const TValue *p2,
 }
 
 
+/* 调用比较大小的元方法 */
 int luaT_callorderTM (lua_State *L, const TValue *p1, const TValue *p2,
                       TMS event) {
   if (!luaT_callbinTM(L, p1, p2, L->top, event))
