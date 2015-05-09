@@ -175,7 +175,7 @@ static TString *internshrstr (lua_State *L, const char *str, size_t l) {
 ** new string (with explicit length)
 */
 /**
- * 如果有未回收的 hort string，则会直接回收利用
+ * 如果有未回收的 short string，则会直接回收利用
  */
 TString *luaS_newlstr (lua_State *L, const char *str, size_t l) {
   if (l <= LUAI_MAXSHORTLEN)  /* short string? */

@@ -41,6 +41,7 @@
 #define luaM_reallocvchar(L,b,on,n)  \
     cast(char *, luaM_realloc_(L, (b), (on)*sizeof(char), (n)*sizeof(char)))
 
+/* 释放 b 指向的内存, s 为内存块大小 */
 #define luaM_freemem(L, b, s)	luaM_realloc_(L, (b), (s), 0)
 /* 
  * 释放对象b所占内存

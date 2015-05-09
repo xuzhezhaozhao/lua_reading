@@ -71,7 +71,7 @@ typedef struct LG {
 
 
 /*
- * 根据偏移从 lua_State 结构指针 来获取对应的 LX 结构指针位置
+ * 根据偏移从 lua_State 指针来获取对应的 LX 指针位置
  */
 #define fromstate(L)	(cast(LX *, cast(lu_byte *, (L)) - offsetof(LX, l)))
 
@@ -172,6 +172,7 @@ static void stack_init (lua_State *L1, lua_State *L) {
 }
 
 
+/* 释放所有 CallInfo 链结点, 释放栈空间 */
 static void freestack (lua_State *L) {
   if (L->stack == NULL)
     return;  /* stack not completely built yet */
@@ -289,6 +290,10 @@ LUA_API lua_State *lua_newthread (lua_State *L) {
 }
 
 
+/*
+ * 释放 lua_State, 关闭栈上的 upvalue, 释放所有 CallInfo 链结点, 释放栈
+ * 空间.
+ */
 void luaE_freethread (lua_State *L, lua_State *L1) {
   LX *l = fromstate(L1);
   luaF_close(L1, L1->stack);  /* close all upvalues for this thread */

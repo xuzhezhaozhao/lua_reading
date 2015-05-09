@@ -195,6 +195,7 @@ typedef struct lua_TValue TValue;
 #define l_isfalse(o)	(ttisnil(o) || (ttisboolean(o) && bvalue(o) == 0))
 
 
+/* 对象 o 是否可回收 */
 #define iscollectable(o)	(rttype(o) & BIT_ISCOLLECTABLE)
 
 
@@ -579,7 +580,12 @@ typedef union Closure {
  */
 typedef union TKey {
   struct {
-    /* TODO */
+	/*
+	 * 加了这个之后就可以由 gc 来标记这个 key 颜色, 标记其颜色为黑色就表示
+	 * 把这个键删除了.
+	 *
+	 * 在 lgc.c 的 removeentry 函数中有用到
+	 */
     TValuefields;
 	/** 
 	 * 因为 node 数组是个 hash 表，解决冲突办法是链表，但这个链表直接是在

@@ -40,6 +40,10 @@ struct UpVal {
 	   * 头指针 
 	   */
       UpVal *next;  /* linked list */
+	  /*
+	   * gc traverseLclosure 函数中当 upvalue 为 open 时且 gc 不在 atomic 
+	   * phase 时, 将其置为 1 
+	   */
       int touched;  /* mark to avoid cycles with dead threads */
     } open;
 	/* close 之后 v 就指向这个值, 即 its own value */
