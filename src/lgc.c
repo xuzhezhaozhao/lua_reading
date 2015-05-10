@@ -128,14 +128,14 @@ static void removeentry (Node *n) {
 ** other objects: if really collected, cannot keep them; for objects
 ** being finalized, keep them in keys, but not in values
 */
-/* o 为 weak table 的 key 或 value, 判断其是否可以被回收 */
+/* o 为 weak table 的 key 或 value, 判断其是否需要 clear */
 static int iscleared (global_State *g, const TValue *o) {
   if (!iscollectable(o)) return 0;
   else if (ttisstring(o)) {
     markobject(g, tsvalue(o));  /* strings are 'values', so are never weak */
     return 0;
   }
-  /* 为白色表示没有其他对象引用它, 表示其可以回收 */
+  /* 为白色表示没有其他对象引用它, 表示其可能需要 clear */
   else return iswhite(gcvalue(o));
 }
 
@@ -242,7 +242,14 @@ GCObject *luaC_newobj (lua_State *L, int tt, size_t sz) {
 ** to appropriate list to be visited (and turned black) later. (Open
 ** upvalues are already linked in 'headuv' list.)
 */
-/* 对象对应的元表也会被标记 */
+/** 
+ * Userdata, strings, closed upvalue: black
+ * Lua closure, C closure, table, thread, proto: gray, add to gray list
+ * 
+ * Userdata 的 metatable 和 uservalue 也会被标记
+ * 
+ * 由宏来保证只有当 o 颜色为 white 时被调用
+ */
 static void reallymarkobject (global_State *g, GCObject *o) {
  reentry:
   white2gray(o);
@@ -382,9 +389,19 @@ static void restartcollection (global_State *g) {
 ** put it in 'weak' list, to be cleared.
 */
 /*
- * traverstable 中调用, 若 gc 处在 GCSpropagate 阶段, 将 weak table 加入
- * 到 g->grayagain 链表中, 在 atomic phase 再次访问. 处于其他阶段时则
- * 加入到 g->weak 链表, 当且仅当该 weak table 中有要回收的 value.
+ * traverstable 中调用.
+ * strong key, weak value table
+ * 
+ * 若 gc 处在 GCSpropagate 阶段, 将 weak table 加入到 g->grayagain 链表中, 
+ * 在 atomic phase 再次访问. 否则按下面的规则添加到对应 list:
+ *
+ *   a. 若 array part 中有元素, 加入到 g->weak list.
+ *   
+ *   b. node part
+ *     1. val is nil: remove entry
+ *     2. val is not nil: mark key, 若 val is white (且不为不可回收对象), 
+ *     add h to weak list.
+ * 
  */
 static void traverseweakvalue (global_State *g, Table *h) {
   Node *n, *limit = gnodelast(h);
@@ -422,12 +439,24 @@ static void traverseweakvalue (global_State *g, Table *h) {
 ** (in the atomic phase).
 */
 /**
- * weak table, 如过 array 部分有 value 或 node 部分有 value 为white, 则
- * 标记它, 并返回 true, 如果 node 部分 key, value 都是 white, 返回 false
+ * 1. check array part, mark white value
+ * 
+ * 2. check node part
+ * 
+ *   若 gc 处在 propogate state: add h to grayagain list, 否则按下面的
+ *   规则添加到对应的 list.
+ *   
+ *   val is nil: remove entry
+ *   white key  - white value:  add h to ephemeron list
+ *   white key  - marked value: do nothing, add h to allweak list
+ *   marked key - white value:  mark value
+ *   
+ *   
+ * 返回值: 标记了任何 object 返回true, 否则 false.
  */
 static int traverseephemeron (global_State *g, Table *h) {
   int marked = 0;  /* true if an object is marked in this traversal */
-  /* true 如果 table 有要回收的 keys */
+  /* true 如果 table 有要 clear 的 keys */
   int hasclears = 0;  /* true if table has white keys */
   int hasww = 0;  /* true if table has entry "white-key -> white-value" */
   Node *n, *limit = gnodelast(h);
@@ -459,8 +488,10 @@ static int traverseephemeron (global_State *g, Table *h) {
   if (g->gcstate == GCSpropagate)
     linkgclist(h, g->grayagain);  /* must retraverse it in atomic phase */
   else if (hasww)  /* table has white->white entries? */
+  /* ephemeron链用途：如果键在后面的 atomic 阶段发现是有效的，则需 mark 其值 */
     linkgclist(h, g->ephemeron);  /* have to propagate again */
   else if (hasclears)  /* table has white keys? */
+    /* 键不可达，值可达，后期需要清理掉不可达的键 */
     linkgclist(h, g->allweak);  /* may have to clean white keys */
   return marked;
 }
@@ -488,10 +519,49 @@ static void traversestrongtable (global_State *g, Table *h) {
 }
 
 /**
- * gc 的 propagate 阶段会调用, 将 table 引用的对象加入到 grey list 中去, 
- * 引用对象包括: 元表, key, value.
+ * weak mode: 将 table 颜色由 black 转为 gray, 由下面的情况决定加入到哪个list,
  * 
- * 还有对于 weak table 的处理
+ *  a. strong key, weak value: 
+ *  
+ *   若 gc 处在 GCSpropagate 阶段, 将 weak table 加入到 g->grayagain 链表中, 
+ *   在 atomic phase 再次访问. 否则按下面的规则添加到对应 list:
+ *
+ *    1. 若 array part 中有元素, 加入到 g->weak list.
+ *   
+ *    2. node part
+ *      1) val is nil: remove entry
+ *      2) val is not nil: mark key, 若 val is white (且不为不可回收对象), 
+ *     	   add h to weak list.
+ *     
+ *
+ *  b. weak key, strong value: 
+ *    ephemeron table
+ *    1. check array part, 标记 white value
+ * 
+ *    2. check node part
+ * 
+ *      若 gc 处在 propogate state: add h to grayagain list, 否则按下面的
+ *      规则添加到对应的 list.
+ *   
+ *      val is nil: remove entry
+ *      white key  - white value:  add h to ephemeron list
+ *      white key  - marked value: do nothing, add h to allweak list
+ *      marked key - white value:  mark value
+ *   
+ *  c. all weak:
+ *     add h to allweak list
+ * 
+ * 
+ * not weak mode: 
+ *  table 颜色仍然是 gray.
+ *  
+ *  1. 标记 array part
+ *  
+ *  2. node part
+ *    value is nil: remove entry
+ *    value is not nil: mark key, mark value
+ *    
+ * 返回值: table 内存大小
  */
 static lu_mem traversetable (global_State *g, Table *h) {
   const char *weakkey, *weakvalue;
@@ -519,6 +589,8 @@ static lu_mem traversetable (global_State *g, Table *h) {
 /**
  * 回收(不标记) cache, 标记 source, constants (k), upvalues name, inside protos,
  * locvar varname
+ * 
+ * 返回值: 遍历的内存大小
  */
 static int traverseproto (global_State *g, Proto *f) {
   int i;
@@ -542,7 +614,12 @@ static int traverseproto (global_State *g, Proto *f) {
 }
 
 
-/* 标记 C闭包中所有的 upvalues */
+/**
+ * 标记 C闭包中所有的 upvalues 
+ *
+ * 返回值: 闭包大小
+ */
+
 static lu_mem traverseCclosure (global_State *g, CClosure *cl) {
   int i;
   for (i = 0; i < cl->nupvalues; i++)  /* mark its upvalues */
@@ -558,7 +635,10 @@ static lu_mem traverseCclosure (global_State *g, CClosure *cl) {
 */
 /*
  * 标记 Lua closure 引用的对象: proto, upvalues, 
- * 当 upvalue 为 open 且 gc 不在 atomic phase 时, 将其 touched 置为 1.
+ * 当 upvalue 为 open 且 gc 不在 atomic phase 时, 不 mark 其值, 而是
+ * 将其 touched 置为 1.
+ * 
+ * 返回值: 闭包大小
  */
 static lu_mem traverseLclosure (global_State *g, LClosure *cl) {
   int i;
@@ -577,8 +657,15 @@ static lu_mem traverseLclosure (global_State *g, LClosure *cl) {
 
 
 /**
- * 标记: 栈上所有元素
- * 当 gc 处在 atomic 中时需要特殊处理
+ * gc 不在 insideatomic state 时
+ * 	 1. 标记: 栈上所有有效元素
+ * 	 2. 收缩栈大小
+ * 	 
+ * gc 处在 insideatomic state 时
+ *   1. 将栈上 free slot 置为 nil
+ *   2. 若 thread 上有 openupval, 则将其重新加入到 g->twups list 中
+ *   
+ * 返回值: thread 结构大小 + 栈空间大小
  */
 static lu_mem traversethread (global_State *g, lua_State *th) {
   StkId o = th->stack;
@@ -608,7 +695,11 @@ static lu_mem traversethread (global_State *g, lua_State *th) {
 ** traverse one gray object, turning it to black (except for threads,
 ** which are always gray).
 */
-/* 只 traverse 一个 gray object */
+/** 
+ * 只 traverse 一个 gray object, 将其标记为 black, 并从 gray list 移除.
+ *
+ * thread 插入到 grayagain list 中
+ */
 static void propagatemark (global_State *g) {
   lu_mem size;
   GCObject *o = g->gray;
@@ -659,7 +750,10 @@ static void propagateall (global_State *g) {
 }
 
 
-/* 不断遍历 weak table 的 ephemerons 链表, 直到一次遍历没有标记任何值为止 */
+/**
+ * 不断遍历 weak table 的 ephemerons 链表, 直到一次遍历没有标记任何值为止.
+ * 此函数结束后键是否可达已最终确定，mark 掉其可达键所关联的值
+ */
 static void convergeephemerons (global_State *g) {
   int changed;
   do {
@@ -869,6 +963,9 @@ static void dothecall (lua_State *L, void *ud) {
 }
 
 
+/**
+ * 调用 tobefnz list 中 object的 __gc 元方法
+ */
 static void GCTM (lua_State *L, int propagateerrors) {
   global_State *g = G(L);
   const TValue *tm;
@@ -1051,15 +1148,24 @@ void luaC_freeallobjects (lua_State *L) {
 
 /**
  * atomic 阶段
- * 标记: running thread
- * 重新标记 l_registry, 基本类型元表(因为这些可能被API修改)
- * 重新标记 white thread 的 open upvalue
- * propagateall 使之前的标记生效
- * propagateall grayagin 链表
  * 
- * 清理weak table 中的 weak key, value entry
+ *   1. 将状态置为 insideatomic
+ *   2. mark running thread, l_registry, global metatable
+ *   3. 重新标记 white thread 的 open upvalue
+ *   4. propagateall, 清空前几步生成的 gray list
+ *   5. 记录前几步 traversed 的内存
+ *   6. propagateall grayagain list, 这一步访问的内存并不统计
+ *   7. converge ephemerons list
+ *   8. clear values from weak tables in weak and allweak list
+ *   9. 将 finobj list 中的不可到达对象移到 tobefnz list 中
+ *   10. mark tobefnz list 中的所有对象
+ *   11. 再次 propagateall, 不统计内存
+ *   12. 再次 converge ephemerons
+ *   13. clear keys from ephemerons and allweak tables
+ *   14. clear values from resurrected weak tables
+ *   15. flip current white
  * 
- * flip currentwhite
+ * 返回值: 此阶段估计访问的内存大小
  */
 static l_mem atomic (lua_State *L) {
   global_State *g = G(L);
@@ -1093,12 +1199,14 @@ static l_mem atomic (lua_State *L) {
   markbeingfnz(g);  /* mark objects that will be finalized */
   propagateall(g);  /* remark, to propagate 'resurrection' */
   g->GCmemtrav = 0;  /* restart counting */
+  /* 复活需 finalizer 的对象及这些对象所关联的对象后，重新 mark */
   convergeephemerons(g);
   /* at this point, all resurrected objects are marked. */
   /* remove dead objects from weak tables */
   clearkeys(g, g->ephemeron, NULL);  /* clear keys from all ephemeron tables */
   clearkeys(g, g->allweak, NULL);  /* clear keys from all 'allweak' tables */
   /* clear values from resurrected weak tables */
+  /* 这里用 ori 是因为 ori 之后的元素在前面已经 clear 过了, 提高效率 */
   clearvalues(g, g->weak, origweak);
   clearvalues(g, g->allweak, origall);
   g->currentwhite = cast_byte(otherwhite(g));  /* flip current white */
@@ -1130,18 +1238,21 @@ static lu_mem sweepstep (lua_State *L, global_State *g,
  * 完成当前的 gc, 将 gc 过程向前推进一个状态, propagate 例外, 每次
  * 只会 traverse 一个 gray object.
  * 
- * 返回 gc 遍历的内存大小
+ * 返回这一步 gc 遍历的内存大小
  */
 static lu_mem singlestep (lua_State *L) {
   global_State *g = G(L);
   switch (g->gcstate) {
     case GCSpause: {
+	  /* 初始 memory traversed 大小为 string table 的大小 */
       g->GCmemtrav = g->strt.size * sizeof(GCObject*);
+	  /* g->GCmemtray 的值会增加 */
       restartcollection(g);
       g->gcstate = GCSpropagate;
       return g->GCmemtrav;
     }
     case GCSpropagate: {
+	  /* 返回的是遍历一个 gray object 访问的内存大小 */
       g->GCmemtrav = 0;
       lua_assert(g->gray);
       propagatemark(g);
@@ -1156,6 +1267,7 @@ static lu_mem singlestep (lua_State *L) {
       work = atomic(L);  /* work is what was traversed by 'atomic' */
       sw = entersweep(L);
       g->GCestimate = gettotalbytes(g);  /* first estimate */;
+	  /* 这一步遍历内存大小 */
       return work + sw * GCSWEEPCOST;
     }
     case GCSswpallgc: {  /* sweep "regular" objects */

@@ -238,6 +238,7 @@ typedef struct lua_TValue TValue;
 #define setbvalue(obj,x) \
   { TValue *io=(obj); val_(io).b=(x); settt_(io, LUA_TBOOLEAN); }
 
+/* x 为 GCObject* */
 #define setgcovalue(L,obj,x) \
   { TValue *io = (obj); GCObject *i_g=(x); \
     val_(io).gc = i_g; settt_(io, ctb(i_g->tt)); }
@@ -581,10 +582,8 @@ typedef union Closure {
 typedef union TKey {
   struct {
 	/*
-	 * 加了这个之后就可以由 gc 来标记这个 key 颜色, 标记其颜色为黑色就表示
-	 * 把这个键删除了.
-	 *
-	 * 在 lgc.c 的 removeentry 函数中有用到
+	 * 在 lgc.c 的 removeentry 函数中有用到, 将其类型(_tt)标记为
+	 * LUA_TDEADKEY 就表示该 entry 被删除.
 	 */
     TValuefields;
 	/** 

@@ -103,6 +103,8 @@
 ** Possible states of the Garbage Collector
 */
 #define GCSpropagate	0
+
+/* 详见 lgc.c 的 atomic 函数 */
 #define GCSatomic	1
 
 /* sweep phase begin */
