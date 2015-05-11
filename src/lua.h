@@ -194,7 +194,7 @@ LUA_API void  (lua_copy) (lua_State *L, int fromidx, int toidx);
  * 检测栈空间是否足够，不够的话会自动增长，栈空间总量有限制
  *
  * n: 所需要的栈大小
- * 返回值: 0 足够，1 不够
+ * 返回值: 1 足够，0 不够
  */
 LUA_API int   (lua_checkstack) (lua_State *L, int n);
 

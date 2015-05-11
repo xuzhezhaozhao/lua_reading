@@ -629,6 +629,7 @@ static void resume (lua_State *L, void *ud) {
 }
 
 
+/* from: 调用 resume 的 thread */
 LUA_API int lua_resume (lua_State *L, lua_State *from, int nargs) {
   int status;
   int oldnny = L->nny;  /* save "number of non-yieldable" calls */

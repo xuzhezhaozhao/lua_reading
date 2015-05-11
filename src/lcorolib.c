@@ -25,6 +25,9 @@ static lua_State *getco (lua_State *L) {
 }
 
 
+/**
+ * narg: resume 传递的参数个数(除 thread 参数)
+ */
 static int auxresume (lua_State *L, lua_State *co, int narg) {
   int status;
   if (!lua_checkstack(co, narg)) {
@@ -54,6 +57,7 @@ static int auxresume (lua_State *L, lua_State *co, int narg) {
 }
 
 
+/* resume thread 在栈上第一个位置 */
 static int luaB_coresume (lua_State *L) {
   lua_State *co = getco(L);
   int r;
@@ -71,6 +75,9 @@ static int luaB_coresume (lua_State *L) {
 }
 
 
+/**
+ * wrap 辅助函数
+ */
 static int luaB_auxwrap (lua_State *L) {
   lua_State *co = lua_tothread(L, lua_upvalueindex(1));
   int r = auxresume(L, co, lua_gettop(L));
@@ -86,6 +93,13 @@ static int luaB_auxwrap (lua_State *L) {
 }
 
 
+/*
+ * Creates a new coroutine, with body f. f must be a Lua function. Returns 
+ * this new coroutine, an object with type "thread".
+ */
+/**
+ * 创建协程, 栈上第一个元素作为其 body (function)
+ */
 static int luaB_cocreate (lua_State *L) {
   lua_State *NL;
   luaL_checktype(L, 1, LUA_TFUNCTION);
@@ -96,8 +110,16 @@ static int luaB_cocreate (lua_State *L) {
 }
 
 
+/**
+ * Creates a new coroutine, with body f. f must be a Lua function. 
+ * Returns a function that resumes the coroutine each time it is 
+ * called. Any arguments passed to the function behave as the extra 
+ * arguments to resume. Returns the same values returned by resume, 
+ * except the first boolean. In case of error, propagates the error.
+ */
 static int luaB_cowrap (lua_State *L) {
   luaB_cocreate(L);
+  /* 上面函数执行后 function 在栈顶, function 为其 upvalue */
   lua_pushcclosure(L, luaB_auxwrap, 1);
   return 1;
 }
@@ -108,6 +130,15 @@ static int luaB_yield (lua_State *L) {
 }
 
 
+/**
+ * Returns the status of coroutine co, as a string: "running", if the 
+ * coroutine is running (that is, it called status); "suspended", if 
+ * the coroutine is suspended in a call to yield, or if it has not 
+ * started running yet; "normal" if the coroutine is active but not 
+ * running (that is, it has resumed another coroutine); and "dead" if 
+ * the coroutine has finished its body function, or if it has stopped 
+ * with an error.
+ */
 static int luaB_costatus (lua_State *L) {
   lua_State *co = getco(L);
   if (L == co) lua_pushliteral(L, "running");
@@ -135,6 +166,12 @@ static int luaB_costatus (lua_State *L) {
 }
 
 
+/**
+ * Returns true when the running coroutine can yield.
+ *
+ * A running coroutine is yieldable if it is not the main thread and it 
+ * is not inside a non-yieldable C function.
+ */
 static int luaB_yieldable (lua_State *L) {
   lua_pushboolean(L, lua_isyieldable(L));
   return 1;
