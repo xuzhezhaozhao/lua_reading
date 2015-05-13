@@ -205,11 +205,17 @@ static void init_registry (lua_State *L, global_State *g) {
 ** open parts of the state that may cause memory-allocation errors.
 ** ('g->version' != NULL flags that the state was completely build)
 */
+/**
+ * 完成与内存有关的初始化工作, 包括分配栈空间, 初始化注册表, 预分配
+ * 某些字符串资源(保留关键字等)
+ */
 static void f_luaopen (lua_State *L, void *ud) {
+  Dlog("luaopen begin.");
   global_State *g = G(L);
   UNUSED(ud);
   stack_init(L, L);  /* init stack */
   init_registry(L, g);
+  Dlog("ini size of string table with size %d", MINSTRTABSIZE);
   luaS_resize(L, MINSTRTABSIZE);  /* initial size of string table */
   luaT_init(L);
   luaX_init(L);
@@ -219,6 +225,7 @@ static void f_luaopen (lua_State *L, void *ud) {
   g->gcrunning = 1;  /* allow gc */
   g->version = lua_version(NULL);
   luai_userstateopen(L);
+  Dlog("luaopen end.");
 }
 
 
@@ -306,6 +313,9 @@ void luaE_freethread (lua_State *L, lua_State *L1) {
 
 
 /**
+ * 创建主线程 和 gloable_state, 初始化其结构; 接着开始进行分配内存, 若分配
+ * 内存出错, 则 close 该 lua_state (以确保释放已分配的内存), 并返回 NULL.
+ * 
  * luaL_newstate 函数封装了这个函数，lauxlib.c 中提供了一个 lua_Alloc 函数
  */
 LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
@@ -348,6 +358,7 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
   for (i=0; i < LUA_NUMTAGS; i++) g->mt[i] = NULL;
   if (luaD_rawrunprotected(L, f_luaopen, NULL) != LUA_OK) {
     /* memory allocation error: free partial state */
+    Dlog("lua state init error, free partial state.")
     close_state(L);
     L = NULL;
   }

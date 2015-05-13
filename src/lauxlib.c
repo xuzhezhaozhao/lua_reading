@@ -1078,6 +1078,7 @@ static void *l_alloc (void *ud, void *ptr, size_t osize, size_t nsize) {
 }
 
 
+/* 初始化完成后 g->panic 的值就是这个函数指针 */
 static int panic (lua_State *L) {
   lua_writestringerror("PANIC: unprotected error in call to Lua API (%s)\n",
                         lua_tostring(L, -1));
@@ -1086,7 +1087,7 @@ static int panic (lua_State *L) {
 
 
 /*
- * 新建一个 lua_State, 失败返回 NULL
+ * 新建并初始化 lua_State, gloable_State, 失败返回 NULL
  */
 LUALIB_API lua_State *luaL_newstate (void) {
   lua_State *L = lua_newstate(l_alloc, NULL);

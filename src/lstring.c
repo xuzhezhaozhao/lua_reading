@@ -48,7 +48,7 @@ int luaS_eqlngstr (TString *a, TString *b) {
 
 
 /**
- * 字符串 hash 值
+ * 计算字符串 hash 值
  */
 unsigned int luaS_hash (const char *str, size_t l, unsigned int seed) {
   unsigned int h = seed ^ cast(unsigned int, l);
@@ -70,6 +70,7 @@ void luaS_resize (lua_State *L, int newsize) {
   int i;
   stringtable *tb = &G(L)->strt;
   if (newsize > tb->size) {  /* grow table if needed */
+    Dlog("luaS_resize, %d in use, grow: old size is %d, new size %d.",tb->nuse, tb->size, newsize);
     luaM_reallocvector(L, tb->hash, tb->size, newsize, TString *);
     for (i = tb->size; i < newsize; i++)
       tb->hash[i] = NULL;
@@ -86,6 +87,7 @@ void luaS_resize (lua_State *L, int newsize) {
     }
   }
   if (newsize < tb->size) {  /* shrink table if needed */
+    Dlog("luaS_resize, %d in use, shrink: old size is %d,  new size is %d.", tb->nuse, tb->size, newsize);
     /* vanishing slice should be empty */
     lua_assert(tb->hash[newsize] == NULL && tb->hash[tb->size - 1] == NULL);
     luaM_reallocvector(L, tb->hash, tb->size, newsize, TString *);
@@ -103,7 +105,8 @@ void luaS_resize (lua_State *L, int newsize) {
  * l: 字符串长度
  * tag: 对象类型, 低三位是non-variant标志，标识Lua基本类型, 其余位区分如
  * 长短字符串类型，整数、浮点数。
- * h: hash值
+ * h: hash值, 这里其实传入的是 g->seed 值, 惰性计算 hash 值, TString 的 extra 
+ * 为 0 表示还没有计算 hash 值.
  */
 static TString *createstrobj (lua_State *L, const char *str, size_t l,
                               int tag, unsigned int h) {
@@ -115,6 +118,7 @@ static TString *createstrobj (lua_State *L, const char *str, size_t l,
   ts = gco2ts(o);
   ts->len = l;
   ts->hash = h;
+  /* 还没有计算 hash 值 */
   ts->extra = 0;
   memcpy(getaddrstr(ts), str, l * sizeof(char));
   getaddrstr(ts)[l] = '\0';  /* ending 0 */
@@ -140,7 +144,14 @@ void luaS_remove (lua_State *L, TString *ts) {
 */
 /**
  * l的长度小于 LUAI_MAXSHORTLEN 就是 short string;
- * luaS_newlstr 函数会调用此函数
+ * luaS_newlstr 函数会调用此函数.
+ * 
+ * hash table 的冲突解决办法是链式.
+ * 
+ * 若查询的字符串不存在 hash table 中, 则会新建字符串并插入.
+ * 当 hash table 中元素个数 >= table size 时, 会尝试扩大为 2 倍.
+ * 
+ * 返回查询的字符串.
  */
 static TString *internshrstr (lua_State *L, const char *str, size_t l) {
   TString *ts;
@@ -175,7 +186,8 @@ static TString *internshrstr (lua_State *L, const char *str, size_t l) {
 ** new string (with explicit length)
 */
 /**
- * 如果有未回收的 short string，则会直接回收利用
+ * 如果有未回收的 short string，则会直接回收利用. 对于 long string 则会
+ * 直接新建一个 TString 对象.
  */
 TString *luaS_newlstr (lua_State *L, const char *str, size_t l) {
   if (l <= LUAI_MAXSHORTLEN)  /* short string? */

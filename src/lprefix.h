@@ -7,6 +7,9 @@
 #ifndef lprefix_h
 #define lprefix_h
 
+#include "lxzz.h"
+#define LUA_USE_APICHECK
+
 
 /*
 ** Allows POSIX/XSI stuff

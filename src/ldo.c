@@ -146,6 +146,7 @@ l_noret luaD_throw (lua_State *L, int errcode) {
 * 执行 f 函数, 抛出异常后会跳转到 LUAI_TRY 之后继续执行代码
  */
 int luaD_rawrunprotected (lua_State *L, Pfunc f, void *ud) {
+  Dlog("luaD_rawrunprotected begin.")
   unsigned short oldnCcalls = L->nCcalls;
   struct lua_longjmp lj;
   lj.status = LUA_OK;
@@ -154,8 +155,11 @@ int luaD_rawrunprotected (lua_State *L, Pfunc f, void *ud) {
   LUAI_TRY(L, &lj,
     (*f)(L, ud);
   );
+  /* 正常结束或者抛出异常之后都会到这里, 由 lj 的status 判断是正常还是异常 */
+  /* TODO  为何只需要保存&恢复这两项, 其余的 lus_State 域呢? */
   L->errorJmp = lj.previous;  /* restore old error handler */
   L->nCcalls = oldnCcalls;
+  Dlog("luaD_rawrunprotected end with status %d.", lj.status);
   return lj.status;
 }
 

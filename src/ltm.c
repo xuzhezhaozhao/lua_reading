@@ -36,6 +36,7 @@ LUAI_DDEF const char *const luaT_typenames_[LUA_TOTALTAGS] = {
 
 /* 初始化元方法名数组 */
 void luaT_init (lua_State *L) {
+  Dlog("luaT_init begin.")
   static const char *const luaT_eventname[] = {  /* ORDER TM */
     "__index", "__newindex",
     "__gc", "__mode", "__len", "__eq",
@@ -50,6 +51,7 @@ void luaT_init (lua_State *L) {
     G(L)->tmname[i] = luaS_new(L, luaT_eventname[i]);
     luaC_fix(L, obj2gco(G(L)->tmname[i]));  /* never collect these names */
   }
+  Dlog("luaT_init end.")
 }
 
 

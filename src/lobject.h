@@ -373,7 +373,13 @@ typedef TValue *StkId;  /* index to stack elements */
  */
 typedef struct TString {
   CommonHeader;
-  /* long strings 是否计算了 hash 值 */
+  /* 
+   * long strings 是否计算了 hash 值, 为 0 表示没有计算, 一个 long string 
+   * 在创建时都是不计算 hash 值的, 只有在第一次用到(如作为table的key)的时
+   * 候才计算 
+   * 
+   * reserved words 在 llex.c 中, 作为索引位置, 下标从 1 开始
+   */
   lu_byte extra;  /* reserved words for short strings; "has hash" for longs */
   /* hash code of string */
   unsigned int hash;
@@ -422,6 +428,7 @@ typedef union UTString {
 ** Get the actual string (array of bytes) from a 'TString'.
 ** (Access to 'extra' ensures that value is really a 'TString'.)
 */
+/* 注意 const 的区别 */
 #define getaddrstr(ts)	(cast(char *, (ts)) + sizeof(UTString))
 #define getstr(ts)  \
   check_exp(sizeof((ts)->extra), cast(const char*, getaddrstr(ts)))

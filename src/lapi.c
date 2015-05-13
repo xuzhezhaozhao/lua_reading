@@ -151,16 +151,18 @@ LUA_API void lua_xmove (lua_State *from, lua_State *to, int n) {
 }
 
 /**
- * 设置 L->panic 为 panicf，并返回原来的值
+ * 设置 g->panic 为 panicf，并返回原来的值
  * 
  * 关于 panic 函数, 见 http://www.lua.org/manual/5.3/manual.html#4.6
  */
 LUA_API lua_CFunction lua_atpanic (lua_State *L, lua_CFunction panicf) {
+  Dlog("lua_atpanic begin.")
   lua_CFunction old;
   lua_lock(L);
   old = G(L)->panic;
   G(L)->panic = panicf;
   lua_unlock(L);
+  Dlog("lua_atpanic end.")
   return old;
 }
 
@@ -876,10 +878,13 @@ LUA_API const char *lua_pushfstring (lua_State *L, const char *fmt, ...) {
  */
 LUA_API void lua_pushcclosure (lua_State *L, lua_CFunction fn, int n) {
   lua_lock(L);
+  Dlog("begin push a c closure.");
   if (n == 0) {
+    Dlog("push a function pointer.");
     setfvalue(L->top, fn);
   }
   else {
+    Dlog("push a c closure.");
     CClosure *cl;
     api_checknelems(L, n);
     api_check(n <= MAXUPVAL, "upvalue index too large");
@@ -895,6 +900,7 @@ LUA_API void lua_pushcclosure (lua_State *L, lua_CFunction fn, int n) {
   }
   api_incr_top(L);
   lua_unlock(L);
+  Dlog("end push a c closure.");
 }
 
 

@@ -70,6 +70,7 @@ static void save (LexState *ls, int c) {
  * 新建'_ENV'字符串 和 lex 保留关键字, 插入string hash table中，并标记为不可回收
  */
 void luaX_init (lua_State *L) {
+  Dlog("luaX_init begin.")
   int i;
   TString *e = luaS_new(L, LUA_ENV);  /* create env name */
   luaC_fix(L, obj2gco(e));  /* never collect this name */
@@ -78,6 +79,7 @@ void luaX_init (lua_State *L) {
     luaC_fix(L, obj2gco(ts));  /* reserved words are never collected */
     ts->extra = cast_byte(i+1);  /* reserved word */
   }
+  Dlog("luaX_init end.")
 }
 
 
