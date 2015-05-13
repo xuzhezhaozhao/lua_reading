@@ -156,7 +156,8 @@ int luaD_rawrunprotected (lua_State *L, Pfunc f, void *ud) {
     (*f)(L, ud);
   );
   /* 正常结束或者抛出异常之后都会到这里, 由 lj 的status 判断是正常还是异常 */
-  /* TODO  为何只需要保存&恢复这两项, 其余的 lus_State 域呢? */
+  /* 为何只需要保存&恢复这两项, 其余的 lus_State 域呢? 其他的由调用该函数
+   * 的函数负责, 如 luaD_pcall */
   L->errorJmp = lj.previous;  /* restore old error handler */
   L->nCcalls = oldnCcalls;
   Dlog("luaD_rawrunprotected end with status %d.", lj.status);
@@ -436,8 +437,8 @@ int luaD_precall (lua_State *L, StkId func, int nresults) {
 
 
 /**
- * C function 调用完之后调用, 将函数的返回值依次放到栈上合适位置(顶部), 多余
- * 的返回值丢失, 不足的补 nil
+ * C function 调用完之后调用, 将函数的返回值依次放到栈上合适位置, 从 
+ * L->ci->func 位置开始放, 多余的返回值丢失, 不足的补 nil.
  * 
  * firstResult: 第一个返回值位置
  * 
@@ -460,6 +461,7 @@ int luaD_poscall (lua_State *L, StkId firstResult) {
   wanted = ci->nresults;
   L->ci = ci = ci->previous;  /* back to caller */
   /* move results to correct place */
+  /* i != 0 && fi... 这里是防止 wanted = 10, 而函数实际只返回了 1 个值 */
   for (i = wanted; i != 0 && firstResult < L->top; i--)
     setobjs2s(L, res++, firstResult++);
   while (i-- > 0)
@@ -699,6 +701,13 @@ LUA_API int lua_yieldk (lua_State *L, int nresults, lua_KContext ctx,
 }
 
 
+/**
+ * u 其实是个 Calls 结构指针
+ * old_top: 调用该函数之前的栈顶, 实际上就是 u 中封装的真正调用的函数位置
+ * ef: 错误处理函数的位置
+ * 
+ * 将会以保护模式执行 func(L, u);
+ */
 int luaD_pcall (lua_State *L, Pfunc func, void *u,
                 ptrdiff_t old_top, ptrdiff_t ef) {
   int status;
@@ -709,6 +718,7 @@ int luaD_pcall (lua_State *L, Pfunc func, void *u,
   L->errfunc = ef;
   status = luaD_rawrunprotected(L, func, u);
   if (status != LUA_OK) {  /* an error occurred? */
+    /* 执行了函数之后栈可以增长, 以前的地址就变了, 所以存成偏移量 */
     StkId oldtop = restorestack(L, old_top);
     luaF_close(L, oldtop);  /* close possible pending closures */
     seterrorobj(L, status, oldtop);

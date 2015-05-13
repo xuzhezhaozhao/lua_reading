@@ -536,6 +536,11 @@ static int runargs (lua_State *L, char **argv, int n) {
 }
 
 
+/**
+ * 不开启 -E 选项时调用
+ * 
+ * 可以通过定义环境变量来加载一段脚本来进行初始化工作, 成功返回 LUA_OK
+ */
 static int handle_luainit (lua_State *L) {
   const char *name = "=" LUA_INITVARVERSION;
   const char *init = getenv(name + 1);
@@ -560,6 +565,7 @@ static int pmain (lua_State *L) {
   char **argv = (char **)lua_touserdata(L, 2);
   int script;
   int args = collectargs(argv, &script);
+
   luaL_checkversion(L);  /* check that interpreter has correct version */
   if (argv[0] && argv[0][0]) progname = argv[0];
   if (args == has_error) {  /* bad arg? */
@@ -584,7 +590,9 @@ static int pmain (lua_State *L) {
       handle_script(L, argv + script) != LUA_OK)
     return 0;
   if (args & has_i)  /* -i option? */
+  {
     doREPL(L);  /* do read-eval-print loop */
+  }
   else if (script == argc && !(args & (has_e | has_v))) {  /* no arguments? */
     if (lua_stdin_is_tty()) {  /* running in interactive mode? */
       print_version();
@@ -599,13 +607,11 @@ static int pmain (lua_State *L) {
 
 int main (int argc, char **argv) {
   int status, result;
-  Dlog("new lua state begin.\n");
   lua_State *L = luaL_newstate();  /* create state */
   if (L == NULL) {
     l_message(argv[0], "cannot create state: not enough memory");
     return EXIT_FAILURE;
   }
-  Dlog("\nnew lua state end.\n");
   lua_pushcfunction(L, &pmain);  /* to call 'pmain' in protected mode */
   lua_pushinteger(L, argc);  /* 1st argument */
   lua_pushlightuserdata(L, argv); /* 2nd argument */

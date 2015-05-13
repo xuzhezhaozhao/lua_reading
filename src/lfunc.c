@@ -106,6 +106,7 @@ void luaF_close (lua_State *L, StkId level) {
     else {
       setobj(L, &uv->u.value, uv->v);  /* move value to upvalue slot */
       uv->v = &uv->u.value;  /* now current value lives here */
+	  /* 此时 upvalue 处在 close 状态 */
 	  /* TODO */
       luaC_upvalbarrier(L, uv);
     }

@@ -395,6 +395,7 @@ static const luaL_Reg mathlib[] = {
 /*
 ** Open math library
 */
+/* 此时栈顶有一个字符串 "math" */
 LUAMOD_API int luaopen_math (lua_State *L) {
   luaL_newlib(L, mathlib);
   lua_pushnumber(L, PI);

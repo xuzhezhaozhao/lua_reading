@@ -19,12 +19,14 @@
 
 #define incr_top(L) {L->top++; luaD_checkstack(L,0);}
 
+/* 保存 p 在栈中的相对位置 */
 #define savestack(L,p)		((char *)(p) - (char *)L->stack)
 /* 获取 &stack[n], n 为栈偏移量 */
 #define restorestack(L,n)	((TValue *)((char *)L->stack + (n)))
 
 
 /* type of protected functions, to be ran by 'runprotected' */
+/* ud 可以是一个结构体指针, 存放函数调用的相关信息 */
 typedef void (*Pfunc) (lua_State *L, void *ud);
 
 LUAI_FUNC int luaD_protectedparser (lua_State *L, ZIO *z, const char *name,

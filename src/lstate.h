@@ -215,9 +215,9 @@ struct lua_State {
   /* 调用链的头部 */
   /*
    * 初始时其 next, previous 域都为 NULL, 其 func 域 且 ci 指针指向它, 
-   * 其 func 域指向栈第一个位置, 且初始该位置为 nil, 其 top 域指向第 22 个位置, 即栈为函
-   * 数调用留有 20 个位置可以使用, 其 callstatus 域为 0. 此时 L->top 指向第 2 个位置, 因为第
-   * 1 个位置已经由 func 域占用了.
+   * 其 func 域指向栈第一个位置, 且初始该位置为 nil, 其 top 域指向第 22
+   * 个位置, 即栈为函数调用留有 20 个位置可以使用, 其 callstatus 域为 0.
+   * 此时 L->top 指向第 2 个位置, 因为第 1 个位置已经由 func 域占用了.
    */
   CallInfo base_ci;  /* CallInfo for first level (C calling Lua) */
   lua_Hook hook;

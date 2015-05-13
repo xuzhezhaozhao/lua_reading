@@ -1022,7 +1022,12 @@ LUALIB_API int luaL_getsubtable (lua_State *L, int idx, const char *fname) {
 ** if 'glb' is true, also registers the result in the global table.
 ** Leaves resulting module on the top.
 */
-/* global table 是 _G */
+/**
+ * global table 是 _G 
+ * 
+ * 加载指定的标准库, 若该库已经加载过, 则忽略, 否则调用 openf 函数加载库,
+ * 调用函数的函数是在保护模式下, 所以这里面调用 openf 函数不用使用保护模式.
+ */
 LUALIB_API void luaL_requiref (lua_State *L, const char *modname,
                                lua_CFunction openf, int glb) {
   luaL_getsubtable(L, LUA_REGISTRYINDEX, "_LOADED");
@@ -1030,7 +1035,8 @@ LUALIB_API void luaL_requiref (lua_State *L, const char *modname,
   if (!lua_toboolean(L, -1)) {  /* package not already loaded? */
     lua_pop(L, 1);  /* remove field */
     lua_pushcfunction(L, openf);
-    lua_pushstring(L, modname);  /* argument to open function */
+	/* TODO  这里的 push 其实是可以去掉的, 经测试根本没有用到*/
+	lua_pushstring(L, modname);  /* argument to open function */
     lua_call(L, 1, 1);  /* call 'openf' to open module */
     lua_pushvalue(L, -1);  /* make copy of module (call result) */
     lua_setfield(L, -3, modname);  /* _LOADED[modname] = module */

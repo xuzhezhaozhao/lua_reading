@@ -16,7 +16,8 @@
 				"stack overflow");}
 
 /**
- * 调整返回值个数, nres 为 -1 表示不截断返回值个数
+ * 调整返回值个数, 当 nres 为 -1 表示不截断返回值个数, 需要调整函数栈顶
+ * ci->top 使得返回值不被截断.
  */
 #define adjustresults(L,nres) \
     { if ((nres) == LUA_MULTRET && L->ci->top < L->top) L->ci->top = L->top; }

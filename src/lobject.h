@@ -178,7 +178,7 @@ typedef struct lua_TValue TValue;
 #define clvalue(o)	check_exp(ttisclosure(o), gco2cl(val_(o).gc))
 /* lua closure */
 #define clLvalue(o)	check_exp(ttisLclosure(o), gco2lcl(val_(o).gc))
-/* o转为指向 Closure 的指针 */
+/* o转为指向 C closure 的指针 */
 #define clCvalue(o)	check_exp(ttisCclosure(o), gco2ccl(val_(o).gc))
 /* o转为指向lua_CFunction的指针 */
 #define fvalue(o)	check_exp(ttislcf(o), val_(o).f)

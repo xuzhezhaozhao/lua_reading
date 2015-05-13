@@ -878,13 +878,13 @@ LUA_API const char *lua_pushfstring (lua_State *L, const char *fmt, ...) {
  */
 LUA_API void lua_pushcclosure (lua_State *L, lua_CFunction fn, int n) {
   lua_lock(L);
-  Dlog("begin push a c closure.");
+  /*Dlog("begin push a c closure.");*/
   if (n == 0) {
-    Dlog("push a function pointer.");
+    /*Dlog("push a function pointer.");*/
     setfvalue(L->top, fn);
   }
   else {
-    Dlog("push a c closure.");
+    /*Dlog("push a c closure.");*/
     CClosure *cl;
     api_checknelems(L, n);
     api_check(n <= MAXUPVAL, "upvalue index too large");
@@ -900,7 +900,6 @@ LUA_API void lua_pushcclosure (lua_State *L, lua_CFunction fn, int n) {
   }
   api_incr_top(L);
   lua_unlock(L);
-  Dlog("end push a c closure.");
 }
 
 
@@ -1406,6 +1405,7 @@ LUA_API void lua_callk (lua_State *L, int nargs, int nresults,
   api_check(L->status == LUA_OK, "cannot do calls on non-normal thread");
   checkresults(L, nargs, nresults);
   func = L->top - (nargs+1);
+
   if (k != NULL && L->nny == 0) {  /* need to prepare continuation? */
     L->ci->u.c.k = k;  /* save continuation */
     L->ci->u.c.ctx = ctx;  /* save context */
@@ -1423,7 +1423,9 @@ LUA_API void lua_callk (lua_State *L, int nargs, int nresults,
 ** Execute a protected call.
 */
 struct CallS {  /* data to 'f_call' */
+  /* 要调用的函数位置 */
   StkId func;
+  /* 函数返回值个数 */
   int nresults;
 };
 
@@ -1459,6 +1461,7 @@ LUA_API int lua_pcallk (lua_State *L, int nargs, int nresults, int errfunc,
   }
   c.func = L->top - (nargs+1);  /* function to be called */
   if (k == NULL || L->nny > 0) {  /* no continuation or no yieldable? */
+    /* lua_pcall 将会执行到这里 */
     c.nresults = nresults;  /* do a 'conventional' protected call */
     status = luaD_pcall(L, f_call, &c, savestack(L, c.func), func);
   }

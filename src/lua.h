@@ -38,7 +38,10 @@
 /*
 ** pseudo-indices
 */
+/* 得到的的 G(L)->l_registry, lapi.c idx2addr 函数中 */
 #define LUA_REGISTRYINDEX	LUAI_FIRSTPSEUDOIDX
+
+/* 获取 C closure 的第 i 个 upvalue */
 #define lua_upvalueindex(i)	(LUA_REGISTRYINDEX - (i))
 
 
@@ -81,6 +84,7 @@ typedef struct lua_State lua_State;
 
 /* predefined values in the registry */
 #define LUA_RIDX_MAINTHREAD	1
+/* _G 全局表 gloable_table */
 #define LUA_RIDX_GLOBALS	2
 #define LUA_RIDX_LAST		LUA_RIDX_GLOBALS
 
@@ -555,7 +559,9 @@ LUA_API void      (lua_setallocf) (lua_State *L, lua_Alloc f, void *ud);
 /*
 ** Event masks
 */
+/* 函数调用事件 */
 #define LUA_MASKCALL	(1 << LUA_HOOKCALL)
+/* 函数返回事件 */
 #define LUA_MASKRET	(1 << LUA_HOOKRET)
 #define LUA_MASKLINE	(1 << LUA_HOOKLINE)
 #define LUA_MASKCOUNT	(1 << LUA_HOOKCOUNT)
