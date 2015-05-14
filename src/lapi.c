@@ -1441,6 +1441,7 @@ static void f_call (lua_State *L, void *ud) {
  * This function behaves exactly like lua_pcall, but allows the called 
  * function to yield (see §4.7 http://www.lua.org/manual/5.3/manual.html#4.7).
  */
+/* errfunc 为错误处理函数, 在 lua.c 的 docall 中有被设置 */
 LUA_API int lua_pcallk (lua_State *L, int nargs, int nresults, int errfunc,
                         lua_KContext ctx, lua_KFunction k) {
   struct CallS c;

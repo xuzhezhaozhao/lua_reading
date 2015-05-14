@@ -81,8 +81,10 @@ typedef struct Labellist {
 /* dynamic structures used by the parser */
 typedef struct Dyndata {
   struct {  /* list of active local variables */
+    /* 初始为 NULL */
     Vardesc *arr;
     int n;
+	/* 初始为 0 */
     int size;
   } actvar;
   Labellist gt;  /* list of pending gotos */

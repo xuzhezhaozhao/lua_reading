@@ -772,6 +772,7 @@ LUALIB_API int luaL_loadfilex (lua_State *L, const char *filename,
 }
 
 
+/* 封装数据块供 lua_Reader 函数读取 */
 typedef struct LoadS {
   const char *s;
   size_t size;
@@ -779,9 +780,10 @@ typedef struct LoadS {
 
 
 /**
- * lua_Reader 类型函数
- * ud: 封装数据块首地址
- * size: 返回地址块大小
+ * lua_Reader 类型函数, 读取 LoadS 类型的数据, 只可读取一次, 下次重复读取
+ * 同一数据时将返回 NULL.
+ * ud: LoadS 类型首地址
+ * size: 返回数据块大小
  * 
  * 返回封装在数据块中的真正的数据块首地址
  */
@@ -790,6 +792,7 @@ static const char *getS (lua_State *L, void *ud, size_t *size) {
   (void)L;  /* not used */
   if (ls->size == 0) return NULL;
   *size = ls->size;
+  /* 只可一次读取 */
   ls->size = 0;
   return ls->s;
 }
@@ -797,9 +800,9 @@ static const char *getS (lua_State *L, void *ud, size_t *size) {
 
 /**
  * 编译字符串
- * buff: 首地址
+ * buff: 待编译字符串的首地址
  * size: buff 长度
- * name: 编译后的chunk名
+ * name: 编译后的chunk名, doREPL 模式下名为 "=stdin"
  * mode: 'binary' or 'text' or NULL, 'binary' 表示预编译好的 chunk,
  * 'text' 为文本程序，为 NULL 时自动判断
  */

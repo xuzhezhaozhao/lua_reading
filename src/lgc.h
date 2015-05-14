@@ -224,6 +224,11 @@
 	if (isblack(p) && iswhite(o)) \
 		luaC_barrier_(L,obj2gco(p),obj2gco(o)); }
 
+/**
+ * 当 gc 状态在 sweep 之前的阶段时, 这个时候是标记可到达的对象, 但是在给
+ * 闭包的 upvalue 赋值的时候, 我们不能确定该 upvalue 是否是可到达的, 为
+ * 了防止这个 upvalue 在 sweep 阶段被回收, 就把这个 upvalue 标记一下.
+ */
 #define luaC_upvalbarrier(L,uv) \
   { if (iscollectable((uv)->v) && !upisopen(uv)) \
          luaC_upvalbarrier_(L,uv); }

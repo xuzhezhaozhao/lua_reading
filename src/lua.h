@@ -28,6 +28,7 @@
 
 
 /* mark for precompiled code ('<esc>Lua') */
+/* binary mode */
 #define LUA_SIGNATURE	"\x1bLua"
 
 /* option for multiple returns in 'lua_pcall' and 'lua_call' */
@@ -397,6 +398,7 @@ LUA_API void  (lua_callk) (lua_State *L, int nargs, int nresults,
 
 LUA_API int   (lua_pcallk) (lua_State *L, int nargs, int nresults, int errfunc,
                             lua_KContext ctx, lua_KFunction k);
+/* f 为错误处理函数位置 */
 #define lua_pcall(L,n,r,f)	lua_pcallk(L, (n), (r), (f), 0, NULL)
 
 LUA_API int   (lua_load) (lua_State *L, lua_Reader reader, void *dt,
@@ -514,6 +516,7 @@ LUA_API void      (lua_setallocf) (lua_State *L, lua_Alloc f, void *ud);
 #define lua_tostring(L,i)	lua_tolstring(L, (i), NULL)
 
 
+/* 将栈顶元素插入到 idx 位置, 相应元素后移 */
 #define lua_insert(L,idx)	lua_rotate(L, (idx), 1)
 
 /* 删除位置 idx 的元素 */

@@ -115,6 +115,8 @@ static void seterrorobj (lua_State *L, int errcode, StkId oldtop) {
  * http://www.di.unipi.it/~nids/docs/longjump_try_trow_catch.html
  * 
  * 健壮的异常处理机制
+ * 
+ * 会在 L->errorJmp 中设置错误码, 使得其调用函数知道是什么错误
  */
 l_noret luaD_throw (lua_State *L, int errcode) {
   if (L->errorJmp) {  /* thread has an error handler? */
@@ -143,10 +145,9 @@ l_noret luaD_throw (lua_State *L, int errcode) {
 
 
 /**
-* 执行 f 函数, 抛出异常后会跳转到 LUAI_TRY 之后继续执行代码
+* 执行 f 函数, 抛出异常后会跳转到 LUAI_TRY 之后继续执行代码, 并返回错误码
  */
 int luaD_rawrunprotected (lua_State *L, Pfunc f, void *ud) {
-  Dlog("luaD_rawrunprotected begin.")
   unsigned short oldnCcalls = L->nCcalls;
   struct lua_longjmp lj;
   lj.status = LUA_OK;
@@ -160,7 +161,6 @@ int luaD_rawrunprotected (lua_State *L, Pfunc f, void *ud) {
    * 的函数负责, 如 luaD_pcall */
   L->errorJmp = lj.previous;  /* restore old error handler */
   L->nCcalls = oldnCcalls;
-  Dlog("luaD_rawrunprotected end with status %d.", lj.status);
   return lj.status;
 }
 
@@ -737,14 +737,19 @@ int luaD_pcall (lua_State *L, Pfunc func, void *u,
 ** Execute a protected parser.
 */
 struct SParser {  /* data to 'f_parser' */
+  /* 要编译的数据流缓冲 */
   ZIO *z;
   Mbuffer buff;  /* dynamic structure used by the scanner */
   Dyndata dyd;  /* dynamic structures used by the parser */
+ /* mode: 'binary' or 'text' or NULL, 'binary' 表示预编译好的 chunk,
+  * 'text' 为文本程序，为 NULL 时自动判断 */
   const char *mode;
+  /* 编译后的函数名 */
   const char *name;
 };
 
 
+/* 检测 load 数据时指定的的模式和实际数据模式是否匹配 */
 static void checkmode (lua_State *L, const char *mode, const char *x) {
   if (mode && strchr(mode, x[0]) == NULL) {
     luaO_pushfstring(L,
@@ -754,6 +759,9 @@ static void checkmode (lua_State *L, const char *mode, const char *x) {
 }
 
 
+/**
+ * ud 为 SParser* 类型
+ */
 static void f_parser (lua_State *L, void *ud) {
   LClosure *cl;
   struct SParser *p = cast(struct SParser *, ud);

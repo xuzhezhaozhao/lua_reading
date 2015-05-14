@@ -226,7 +226,7 @@ LUALIB_API void (luaL_requiref) (lua_State *L, const char *modname,
 /** 
  * s: string
  * sz: string length
- * n: "=stdin"
+ * n: 文件名, 如 REPL 模式下为 "=stdin"
  */
 #define luaL_loadbuffer(L,s,sz,n)	luaL_loadbufferx(L,s,sz,n,NULL)
 
