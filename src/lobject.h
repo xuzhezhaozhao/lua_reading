@@ -398,25 +398,26 @@ typedef struct TString {
  * 关于上面这句话可以用下面的程序测试， 我们会发现 tt.us 和 tt.i的地址总是对齐
  * 到8. 在TestPadding结构中 us 会占用16个字节的空间，而不是9个。
  * 且sizeof(UTString)的值也是16不是9.
-typedef union UTSting {
-	L_Umaxalign dummy;
-	char a[9];
-} UTSting;
-
-typedef struct TestPadding {
-	UTSting us;
-	char i;
-} TestPadding;
-
-int main(int argc, char *argv[])
-{
-	TestPadding tt;
-	printf("%p\n", &tt.us);
-	printf("%p\n", &tt.i);
-
-	return 0;
-}
-*/
+ *
+ * typedef union UTSting {
+ * 	 L_Umaxalign dummy;
+ * 	 char a[9];
+ * } UTSting;
+ *
+ * typedef struct TestPadding {
+ *	 UTSting us;
+ *	 char i;
+ * } TestPadding;
+ *
+ * int main(int argc, char *argv[])
+ * {
+ *   TestPadding tt;
+ *	 printf("%p\n", &tt.us);
+ *	 printf("%p\n", &tt.i);
+ *
+ *   return 0;
+ * }
+ */
 
 typedef union UTString {
   L_Umaxalign dummy;  /* ensures maximum alignment for strings */
