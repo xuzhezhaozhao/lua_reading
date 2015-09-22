@@ -258,8 +258,8 @@ static lua_Number lua_strx2number (const char *s, char **endptr) {
 
 
 /**
- * 字符串转 lua_Number类型, 利用标准函数 strtod 实现,
- * 结果保存在 *result 中，成功返回字符串首地址，失败返回NULL
+ * 字符串转 lua_Number 类型, 利用标准函数 strtod 实现,
+ * 结果保存在 *result 中，成功返回字符串首地址，失败(包括inf, nan)返回 NULL
  */
 static const char *l_str2d (const char *s, lua_Number *result) {
   char *endptr;
@@ -310,8 +310,8 @@ static const char *l_str2int (const char *s, lua_Integer *result) {
 
 
 /**
- * 字符串转 为 number 类型, 先尝试转为 lua_Integer 类型，
- * 失败后尝试转为lua_Number类型,
+ * 字符串转为 number 类型, 先尝试转为 lua_Integer 类型，
+ * 失败后尝试转为 lua_Number 类型,
  * 
  * 成功则返回字符串长度，失败返回0
  */

@@ -223,10 +223,6 @@ LUA_API int             (lua_type) (lua_State *L, int idx);
 LUA_API const char     *(lua_typename) (lua_State *L, int tp);
 
 LUA_API lua_Number      (lua_tonumberx) (lua_State *L, int idx, int *isnum);
-/**
- * 栈idx位置元素若为 lua_Integer类型，则返回，若pisum 非 NULL， 置 *pisum 为1，
- * 否则置 pisum 为 0.
- */
 LUA_API lua_Integer     (lua_tointegerx) (lua_State *L, int idx, int *isnum);
 /**
  * 若 idx 位置不存在元素, 就是nil, 返回false，若存在元素且元素不是 flase，
@@ -287,10 +283,6 @@ LUA_API void  (lua_arith) (lua_State *L, int op);
  */
 
 LUA_API int   (lua_rawequal) (lua_State *L, int idx1, int idx2);
-/**
- * 比较栈位置idx1, idx2上两个数的大小
- * op 为上面宏定义的3个值: LUA_OPEQ, LUA_OPLT, LUA_OPLE
- */
 LUA_API int   (lua_compare) (lua_State *L, int idx1, int idx2, int op);
 
 
@@ -363,13 +355,6 @@ LUA_API int  (lua_getuservalue) (lua_State *L, int idx);
 /* _G[name] */
 LUA_API void  (lua_setglobal) (lua_State *L, const char *name);
 LUA_API void  (lua_settable) (lua_State *L, int idx);
-/**
- * 可以用来为lua lib设置属性, 比如 math.pi, math.huge
- */
-/**
- * t[k] = v, t 为 stack[idx], v 为栈顶元素
- * 最后弹出 v, 可能使用元方法
- */
 LUA_API void  (lua_setfield) (lua_State *L, int idx, const char *k);
 LUA_API void  (lua_seti) (lua_State *L, int idx, lua_Integer n);
 LUA_API void  (lua_rawset) (lua_State *L, int idx);
@@ -478,6 +463,9 @@ LUA_API void      (lua_setallocf) (lua_State *L, lua_Alloc f, void *ud);
 #define lua_getextraspace(L)	((void *)((char *)(L) - LUA_EXTRASPACE))
 
 #define lua_tonumber(L,i)	lua_tonumberx(L,(i),NULL)
+/**
+ * 调用这个宏需确保栈第 i 个元素是 Lua_Integer 类型
+ */
 #define lua_tointeger(L,i)	lua_tointegerx(L,(i),NULL)
 
 /**

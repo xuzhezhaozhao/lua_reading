@@ -45,23 +45,9 @@ LUALIB_API int (luaL_argerror) (lua_State *L, int arg, const char *extramsg);
  */
 LUALIB_API const char *(luaL_checklstring) (lua_State *L, int arg,
                                                           size_t *l);
-/**
- * 实现可选字符串参数;
- * arg: index
- * def: 默认值
- * len: 返回字符串长度
- * 返回值: 字符串首地址
- */
 LUALIB_API const char *(luaL_optlstring) (lua_State *L, int arg,
                                           const char *def, size_t *l);
-/**
- * 检测参数是否是number类型, arg为参数的栈位置,
- * 不是会报错
- */
 LUALIB_API lua_Number (luaL_checknumber) (lua_State *L, int arg);
-/**
- * 获取函数的可选参数, 默认值是def, 如函数 math.atan
- */
 LUALIB_API lua_Number (luaL_optnumber) (lua_State *L, int arg, lua_Number def);
 
 /**
@@ -69,11 +55,6 @@ LUALIB_API lua_Number (luaL_optnumber) (lua_State *L, int arg, lua_Number def);
  * 返回该元素.
  */
 LUALIB_API lua_Integer (luaL_checkinteger) (lua_State *L, int arg);
-
-/**
- * 可选参数.
- * 若栈arg位置有元素，则返回该元素，否则返回默认值 def.
- */
 LUALIB_API lua_Integer (luaL_optinteger) (lua_State *L, int arg,
                                           lua_Integer def);
 
@@ -90,9 +71,6 @@ LUALIB_API void (luaL_checkstack) (lua_State *L, int sz, const char *msg);
  * t   : 类型
  */
 LUALIB_API void (luaL_checktype) (lua_State *L, int arg, int t);
-/**
- * 栈位置arg是否有值
- */
 LUALIB_API void (luaL_checkany) (lua_State *L, int arg);
 
 /**
@@ -182,13 +160,14 @@ LUALIB_API void (luaL_requiref) (lua_State *L, const char *modname,
 
 /**
  * 依次进行lua版本检查, 创建 table, 设置函数
+ * l: LuaL_Reg 类型
  */
 #define luaL_newlib(L,l)  \
   (luaL_checkversion(L), luaL_newlibtable(L,l), luaL_setfuncs(L,l,0))
 
 /**
- * 检验参数, extramsg 为错误信息, cond 为true则为true, 否则用
- * luaL_argerror检验arg
+ * 检验参数, extramsg 为错误信息, cond 为 true 则为 true, 否则用
+ * luaL_argerror 检验 arg 位置是否有非 nil 元素, 没有则报错并终止程序
  */
 #define luaL_argcheck(L, cond,arg,extramsg)	\
 		((void)((cond) || luaL_argerror(L, (arg), (extramsg))))

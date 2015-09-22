@@ -60,7 +60,7 @@ static int math_cos (lua_State *L) {
 static int math_tan (lua_State *L) {
   lua_pushnumber(L, l_mathop(tan)(luaL_checknumber(L, 1)));
   return 1;
-}
+};
 
 static int math_asin (lua_State *L) {
   lua_pushnumber(L, l_mathop(asin)(luaL_checknumber(L, 1)));
@@ -93,7 +93,7 @@ static int math_toint (lua_State *L) {
 }
 
 /**
- * 浮点数转整数
+ * 若 d 在整数的表示范围内, 将 d 强制类型转换为整数类型, 否则结果为 number 类型
  */
 static void pushnumint (lua_State *L, lua_Number d) {
   lua_Integer n;
@@ -130,6 +130,7 @@ static int math_fmod (lua_State *L) {
   if (lua_isinteger(L, 1) && lua_isinteger(L, 2)) {
     lua_Integer d = lua_tointeger(L, 2);
     if ((lua_Unsigned)d + 1u <= 1u) {  /* special cases: -1 or 0 */
+      /* 第二个参数为 0 则报错 */
       luaL_argcheck(L, d != 0, 2, "zero");
       lua_pushinteger(L, 0);  /* avoid overflow with 0x80000... / -1 */
     }

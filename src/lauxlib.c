@@ -419,6 +419,9 @@ LUALIB_API void luaL_checktype (lua_State *L, int arg, int t) {
 }
 
 
+/**
+ * 栈位置 arg 是否有元素, 没有就报错并终止程序
+ */
 LUALIB_API void luaL_checkany (lua_State *L, int arg) {
   if (lua_type(L, arg) == LUA_TNONE)
     luaL_argerror(L, arg, "value expected");
@@ -454,6 +457,10 @@ LUALIB_API const char *luaL_optlstring (lua_State *L, int arg,
 }
 
 
+/**
+ * 检测 arg 位置参数是否是或可以转换为 number 类型, 是的话返回 number 类型的值, 
+ * 不是则报错并终止程序
+ */
 LUALIB_API lua_Number luaL_checknumber (lua_State *L, int arg) {
   int isnum;
   lua_Number d = lua_tonumberx(L, arg, &isnum);
@@ -463,6 +470,11 @@ LUALIB_API lua_Number luaL_checknumber (lua_State *L, int arg) {
 }
 
 
+/**
+ * 获取函数的可选参数, 默认值是def, 如函数 math.atan
+ *
+ * arg: 可选参数位置
+ */
 LUALIB_API lua_Number luaL_optnumber (lua_State *L, int arg, lua_Number def) {
   return luaL_opt(L, luaL_checknumber, arg, def);
 }
@@ -477,7 +489,7 @@ static void interror (lua_State *L, int arg) {
 
 
 /**
- * 检测栈arg位置的元素是否是integer类型, arg为参数的栈位置, 不是则报错中止
+ * 检测栈arg位置的元素是否是integer类型, arg为参数的栈位置, 不是则报错中止,
  * 返回该元素.
  */
 LUALIB_API lua_Integer luaL_checkinteger (lua_State *L, int arg) {
@@ -492,7 +504,7 @@ LUALIB_API lua_Integer luaL_checkinteger (lua_State *L, int arg) {
 
 /**
  * 可选参数.
- * 若栈arg位置有元素，则返回该元素，否则返回默认值 def.
+ * 若栈 arg 位置(相对于当前函数栈)有元素，则返回该元素，否则返回默认值 def.
  */
 LUALIB_API lua_Integer luaL_optinteger (lua_State *L, int arg,
                                                       lua_Integer def) {

@@ -61,6 +61,13 @@ const char lua_ident[] =
 
 
 /**
+ * 当 idx > 0 时, 返回函数栈上第 idx 个参数位置, 
+ * 当 idx < 0 时且不是伪索引时, 返回 L->top + idx 位置,
+ * 当 idx 为伪索引 LUA_REGISTRYINDEX 时, 返回 L->l_G->l_registry 地址,
+ * 当 idx < LUA_REGISTRYINDEX 时, 首先 idx = LUA_REGISTRYINDEX - idx, 若当前
+ * 调用栈上的函数为 light C function, 则返回 NONVALIDVALUE, 否则(一定为
+ * C closure) 返回 C closure 的第 idx 个(1 based) upvalue 值
+ *
  * 若 idx 无效，返回 NONVALIDVALUE
  * 
  * idx 还有可能是 pseudo index，返回对应 upvalue 的地址
@@ -81,10 +88,12 @@ static TValue *index2addr (lua_State *L, int idx) {
     return &G(L)->l_registry;
   else {  /* upvalues */
     idx = LUA_REGISTRYINDEX - idx;
+	/* idx 此时变成正数 */
     api_check(idx <= MAXUPVAL + 1, "upvalue index too large");
     if (ttislcf(ci->func))  /* light C function? */
       return NONVALIDVALUE;  /* it has no upvalues */
     else {
+      /* 必须是 C closure */
       CClosure *func = clCvalue(ci->func);
       return (idx <= func->nupvalues) ? &func->upvalue[idx-1] : NONVALIDVALUE;
     }
@@ -363,9 +372,6 @@ LUA_API int lua_iscfunction (lua_State *L, int idx) {
  * (that is, the value is a number and is represented as an 
  * integer), and 0 otherwise.
  */
-/**
- * 是否是整数，不进行类型转换
- */
 LUA_API int lua_isinteger (lua_State *L, int idx) {
   StkId o = index2addr(L, idx);
   return ttisinteger(o);
@@ -485,6 +491,9 @@ LUA_API void lua_arith (lua_State *L, int op) {
  *    LUA_OPLE: compares for less or equal (<=)
  */
 /**
+ * 比较栈位置 idx1, idx2 上两个对象的大小
+ * op 为上面宏定义的3个值: LUA_OPEQ, LUA_OPLT, LUA_OPLE
+ *
  * 比较运算符的实现，使用元方法
  */
 LUA_API int lua_compare (lua_State *L, int index1, int index2, int op) {
@@ -553,8 +562,13 @@ LUA_API lua_Number lua_tonumberx (lua_State *L, int idx, int *pisnum) {
 
 
 /**
- * 栈idx位置元素若为 lua_Integer类型，则返回，若pisum 非 NULL， 置 *pisum 为1，
- * 否则置 pisum 为 0.
+ * 栈 idx 位置元素若为 lua_Integer 类型，则返回其 Integer 值，若 pisum 非 NULL， 
+ * 置 *pisum 为1，否则置 pisum 为 0.
+ *
+ * 若 idx 位置元素不为 lua_Integer 类型, 则会尝试转换(idx 位置元素不会改变),
+ * lua_Number 类型和 TString 类型会被尝试转换为 lua_Integer 类型, 转换失败返回 0
+ *
+ * 若定义了 LUA_NOCVTS2N 宏, 则不对 TString 类型进行转换
  */
 LUA_API lua_Integer lua_tointegerx (lua_State *L, int idx, int *pisnum) {
   lua_Integer res;
@@ -872,19 +886,12 @@ LUA_API const char *lua_pushfstring (lua_State *L, const char *fmt, ...) {
  * just a pointer to the C function. In that case, it never raises a 
  * memory error.
  */
-/**
- * n 为 0时，直接压入 fn
- * n 不为 0 时，说明闭包有 n 个 upvalues
- */
 LUA_API void lua_pushcclosure (lua_State *L, lua_CFunction fn, int n) {
   lua_lock(L);
-  /*Dlog("begin push a c closure.");*/
   if (n == 0) {
-    /*Dlog("push a function pointer.");*/
     setfvalue(L->top, fn);
   }
   else {
-    /*Dlog("push a c closure.");*/
     CClosure *cl;
     api_checknelems(L, n);
     api_check(n <= MAXUPVAL, "upvalue index too large");
@@ -1101,7 +1108,8 @@ LUA_API int lua_rawgetp (lua_State *L, int idx, const void *p) {
  * you can use the function lua_newtable.
  */
 /**
- * 在栈顶建一个空的 Table
+ * 在栈顶建一个空的 Table, 新建 lib table 时会用到, 因为这种情况下是知道需要
+ * 分配的元素个数的
  */
 LUA_API void lua_createtable (lua_State *L, int narray, int nrec) {
   Table *t;
@@ -1221,6 +1229,8 @@ LUA_API void lua_settable (lua_State *L, int idx) {
  * function may trigger a metamethod for the "newindex" event (see §2.4).
  */
 /**
+ * 可以用来为lua lib设置属性, 比如 math.pi, math.huge
+ *
  * t[k] = v, t 为 stack[idx], v 为栈顶元素
  * 最后弹出 v, 可能使用元方法
  */

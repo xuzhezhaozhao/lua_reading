@@ -244,8 +244,8 @@ typedef struct lua_TValue TValue;
     val_(io).gc = i_g; settt_(io, ctb(i_g->tt)); }
 
 /**
- * 将obj指向的对象 Value 的union元素设为 (GCObjec *) 类型，并指向x指向的对象;
- * tag设为 x 指向的对象tag，并添加可回收属性
+ * 将obj指向的对象 Value 的 union 元素设为(GCObjec *)类型, 并指向 x 指向的对象;
+ * tag 设为 x 指向的对象 tag，并添加可回收属性
  */
 #define setsvalue(L,obj,x) \
   { TValue *io = (obj); TString *x_ = (x); \
@@ -690,12 +690,6 @@ LUAI_FUNC int luaO_ceillog2 (unsigned int x);
  */
 LUAI_FUNC void luaO_arith (lua_State *L, int op, const TValue *p1,
                            const TValue *p2, TValue *res);
-/**
- * 字符串转 为 number 类型, 先尝试转为 lua_Integer 类型，
- * 失败后尝试转为lua_Number类型,
- * 
- * 成功则返回字符串长度，失败返回0
- */
 LUAI_FUNC size_t luaO_str2num (const char *s, TValue *o);
 LUAI_FUNC int luaO_hexavalue (int c);
 /* 将 number 对象转成字符串, 如 5， 5.0， 5e9 */

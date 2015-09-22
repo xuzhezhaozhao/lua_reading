@@ -68,6 +68,7 @@ typedef struct stringtable {
 ** function can be called with the correct top.
 */
 typedef struct CallInfo {
+  /* only for C light function or C closure */
   StkId func;  /* function index in the stack */
   /* 这个值标识的是当前函数可用的最大栈位置, L->top 超过这个值就是溢出了 */
   StkId	top;  /* top for this function */

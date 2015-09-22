@@ -32,9 +32,9 @@
 	(ttisfloat(o) ? (*(n) = fltvalue(o), 1) : luaV_tonumber_(o,n))
 
 /**
- * 将对象 o 转为 lua_Integer 类型，值保存在 *i 中，成功返回true,
- * 处理浮点数可以选择舍入方式,当前设置的是只接受整数，不接受浮点数, 
- * 参考函数luaV_tointeger, 在 lvm.c 中定义
+ * 将对象 o 转为 lua_Integer 类型，值保存在 *i 中，成功返回 true,
+ * 处理浮点数可以选择舍入方式, 当前设置的是只接受整数，不接受浮点数, 
+ * 参考函数 luaV_tointeger, 在 lvm.c 中定义
  */
 #define tointeger(o,i) \
 	(ttisinteger(o) ? (*(i) = ivalue(o), 1) : luaV_tointeger_(o,i))

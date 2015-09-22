@@ -88,7 +88,8 @@ int luaV_tonumber_ (const TValue *obj, lua_Number *n) {
 ** mode == 1: takes the floor of the number
 ** mode == 2: takes the ceil of the number
 */
-/* 结果保存在 *p 中, 转换成功返回 1, 失败返回 0 */
+/* obj 值不变, 结果保存在 *p 中, 转换成功返回 1, 若 float 值超过了 lua_Integer
+ * 数据类型的表示范围则返回 0, 若 obj 为 TString 类型, */
 static int tointeger_aux (const TValue *obj, lua_Integer *p, int mode) {
   TValue v;
  again:
@@ -108,7 +109,7 @@ static int tointeger_aux (const TValue *obj, lua_Integer *p, int mode) {
   }
   else if (cvt2num(obj) &&
             luaO_str2num(svalue(obj), &v) == tsvalue(obj)->len + 1) {
-	  /* 先将字符串转为 number类型, 在 goto 重新转 number 为 整数 */
+	  /* 先将字符串转为 number 类型, 在 goto 重新转 number 为 整数 */
     obj = &v;
     goto again;  /* convert result from 'luaO_str2num' to an integer */
   }
