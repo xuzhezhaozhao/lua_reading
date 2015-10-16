@@ -22,9 +22,11 @@ typedef struct Zio ZIO;
 
 
 typedef struct Mbuffer {
+  /* 初始为 NULL */
   char *buffer;
   /* buffer 中的有效数据大小 */
   size_t n;
+  /* 初始为 0 */
   size_t buffsize;
 } Mbuffer;
 

@@ -703,7 +703,7 @@ LUA_API int lua_yieldk (lua_State *L, int nresults, lua_KContext ctx,
 
 /**
  * u 其实是个 Calls 结构指针
- * old_top: 调用该函数之前的栈顶, 实际上就是 u 中封装的真正调用的函数位置
+ * old_top: u 中封装的真正调用函数的栈位置
  * ef: 错误处理函数的位置
  * 
  * 将会以保护模式执行 func(L, u);
@@ -771,6 +771,7 @@ static void f_parser (lua_State *L, void *ud) {
     cl = luaU_undump(L, p->z, &p->buff, p->name);
   }
   else {
+	/* REPL 模式 */
     checkmode(L, p->mode, "text");
     cl = luaY_parser(L, p->z, &p->buff, &p->dyd, p->name, c);
   }

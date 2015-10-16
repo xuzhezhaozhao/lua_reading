@@ -816,7 +816,7 @@ static const char *getS (lua_State *L, void *ud, size_t *size) {
  * size: buff 长度
  * name: 编译后的chunk名, doREPL 模式下名为 "=stdin"
  * mode: 'binary' or 'text' or NULL, 'binary' 表示预编译好的 chunk,
- * 'text' 为文本程序，为 NULL 时自动判断
+ * 'text' 为文本程序，为 NULL 时自动判断 (REPL 时为 NULL)
  */
 LUALIB_API int luaL_loadbufferx (lua_State *L, const char *buff, size_t size,
                                  const char *name, const char *mode) {
@@ -1108,7 +1108,7 @@ static int panic (lua_State *L) {
 
 
 /*
- * 新建并初始化 lua_State, gloable_State, 失败返回 NULL
+ * 新建并初始化 lua_State, global_State, 失败返回 NULL
  */
 LUALIB_API lua_State *luaL_newstate (void) {
   lua_State *L = lua_newstate(l_alloc, NULL);

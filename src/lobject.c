@@ -50,7 +50,7 @@ int luaO_int2fb (unsigned int x) {
 
 
 /* converts back */
-/* TODO 在执行什么运算? */
+/* 见上面函数的注释 */
 int luaO_fb2int (int x) {
   int e = (x >> 3) & 0x1f;
   if (e == 0) return x;
